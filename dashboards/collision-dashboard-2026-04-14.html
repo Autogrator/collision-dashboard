@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Collision Engine - Weekly Intelligence Report</title>
+    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;700&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Montserrat', sans-serif;
+            background-color: #f5f5f5;
+            color: #434748;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Header */
+        .header {
+            background-color: #16478e;
+            color: white;
+            padding: 30px 20px;
+            display: flex;
+            align-items: center;
+            gap: 30px;
+            margin-bottom: 40px;
+            border-radius: 4px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .header img {
+            max-height: 50px;
+            object-fit: contain;
+        }
+
+        .header-text h1 {
+            font-family: 'Oswald', sans-serif;
+            font-size: 28px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 5px;
+        }
+
+        .header-text p {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        /* Summary Cards */
+        .summary-cards {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 40px;
+            flex-wrap: wrap;
+        }
+
+        .summary-card {
+            background: white;
+            padding: 25px;
+            border-radius: 4px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+            flex: 1;
+            min-width: 200px;
+            text-align: center;
+        }
+
+        .summary-card .number {
+            font-size: 36px;
+            font-weight: 700;
+            color: #16478e;
+            margin-bottom: 10px;
+        }
+
+        .summary-card .label {
+            font-size: 13px;
+            color: #999;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 600;
+        }
+
+        /* Section Headers */
+        .section-header {
+            font-family: 'Oswald', sans-serif;
+            font-size: 20px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 25px;
+            margin-top: 40px;
+            color: #16478e;
+            border-bottom: 3px solid #16478e;
+            padding-bottom: 10px;
+        }
+
+        .section-header:first-child {
+            margin-top: 0;
+        }
+
+        /* Company Cards */
+        .company-card {
+            background: white;
+            border-left: 4px solid #16478e;
+            padding: 25px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #f0f4f8;
+        }
+
+        .card-header h3 {
+            font-size: 18px;
+            font-weight: 700;
+            color: #16478e;
+        }
+
+        .score-badge {
+            color: white;
+            padding: 6px 12px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .signal-info {
+            margin-bottom: 15px;
+        }
+
+        .signal-info p {
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .signal-info strong {
+            color: #16478e;
+        }
+
+        .contacts-info {
+            background-color: #f9f9f9;
+            padding: 12px;
+            border-radius: 3px;
+            margin-bottom: 15px;
+            font-size: 13px;
+        }
+
+        .contacts-info p {
+            margin: 0;
+        }
+
+        /* Expandable Sections */
+        .expandable-section {
+            margin-bottom: 10px;
+        }
+
+        .expand-btn {
+            background-color: #f0f4f8;
+            border: 1px solid #ddd;
+            padding: 12px 15px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            color: #16478e;
+            width: 100%;
+            text-align: left;
+            transition: all 0.3s ease;
+        }
+
+        .expand-btn:hover {
+            background-color: #e8ecf3;
+        }
+
+        .expand-content {
+            padding: 15px;
+            background-color: #fafafa;
+            border: 1px solid #f0f4f8;
+            border-top: none;
+            border-radius: 0 0 3px 3px;
+        }
+
+        .draft-box {
+            background: white;
+            padding: 15px;
+            border-radius: 3px;
+            border-left: 3px solid #16478e;
+        }
+
+        .draft-box p {
+            margin-bottom: 10px;
+            font-size: 13px;
+        }
+
+        .draft-box pre {
+            background: white;
+            padding: 10px;
+            border-radius: 3px;
+            overflow-x: auto;
+            font-size: 12px;
+            line-height: 1.5;
+            font-family: 'Montserrat', sans-serif;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        /* Accordion */
+        .accordion-item {
+            margin-bottom: 1px;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+        }
+
+        .accordion-btn {
+            background-color: #f9f9f9;
+            border: none;
+            padding: 15px;
+            width: 100%;
+            text-align: left;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            color: #16478e;
+            transition: all 0.3s ease;
+        }
+
+        .accordion-btn:hover {
+            background-color: #f0f4f8;
+        }
+
+        .accordion-content {
+            padding: 15px 20px;
+            background: white;
+        }
+
+        .accordion-content ul {
+            list-style: none;
+            columns: 2;
+            column-gap: 30px;
+        }
+
+        .accordion-content li {
+            font-size: 13px;
+            padding: 6px 0;
+            break-inside: avoid;
+        }
+
+        /* Footer */
+        .footer {
+            background-color: #434748;
+            color: white;
+            text-align: center;
+            padding: 30px 20px;
+            margin-top: 60px;
+            font-size: 12px;
+        }
+
+        .footer a {
+            color: #6ba3d6;
+            text-decoration: none;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            .header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 15px;
+            }
+
+            .summary-cards {
+                flex-direction: column;
+            }
+
+            .summary-card {
+                min-width: 100%;
+            }
+
+            .card-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+
+            .accordion-content ul {
+                columns: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <img src="https://files.simons.coach/coachwin/brand/assets/logos/logo-reverse-white-blue.svg" alt="Coach.Win">
+            <div class="header-text">
+                <h1>Collision Engine — Weekly Intelligence</h1>
+                <p>April 14, 2026</p>
+            </div>
+        </div>
+
+        <!-- Summary Cards -->
+        <div class="summary-cards">
+            <div class="summary-card">
+                <div class="number">37</div>
+                <div class="label">Companies Scanned</div>
+            </div>
+            <div class="summary-card">
+                <div class="number">9</div>
+                <div class="label">Signals Found</div>
+            </div>
+            <div class="summary-card">
+                <div class="number">3</div>
+                <div class="label">Priority Outreach</div>
+            </div>
+            <div class="summary-card">
+                <div class="number">24</div>
+                <div class="label">No Findings</div>
+            </div>
+        </div>
+
+        <!-- Priority Outreach Section -->
+        <h2 class="section-header">Priority Outreach This Week</h2>
+        
+        <div class="company-card">
+            <div class="card-header">
+                <h3>Arbor Aesthetics</h3>
+                <span class="score-badge" style="background-color: #16478e;">7/10 - HOT</span>
+            </div>
+            <div class="signal-info">
+                <p><strong>Signal:</strong> Growth + Leadership Transition</p>
+                <p>Jeff retired from climbing, focusing on business growth. Active hiring. 20-year anniversary.</p>
+            </div>
+            <div class="contacts-info">
+                <p><strong>Contacts:</strong> Jeff Grewe (jeffrey@arboraesthetics.com), Amy Grewe (amy@arboraesthetics.com), Jacob Brown (jacob@arboraesthetics.com)</p>
+            </div>
+            <div class="expandable-section">
+                <button class="expand-btn" onclick="toggleExpand(this)">📧 Email Draft</button>
+                <div class="expand-content" style="display: none;">
+                    <div class="draft-box">
+                        <p><strong>Subject:</strong> Growing Past the Owner Doing the Work</p>
+                        <pre>Hi [First Name],
+
+We've been following Arbor Aesthetics' growth, and noticed something interesting: you're hitting the 20-year mark while Jeff's transitioning from being the climber to being the leader. That's a critical inflection point.
+
+In our experience with owner-led service companies, this is where things get tricky. You've built something that works because you know how to do the work—but scaling means learning to lead the people doing the work. That's a different skill set entirely.
+
+The companies we see nail this transition usually do it intentionally. They're clear about what got them here (the founder's technical excellence), and deliberate about what comes next (building systems and a leadership culture that doesn't depend on one person).
+
+Worth a conversation if you're thinking about what comes next for Arbor Aesthetics.
+
+Best,
+Coach.Win Team</pre>
+                    </div>
+                </div>
+            </div>
+            <div class="expandable-section">
+                <button class="expand-btn" onclick="toggleExpand(this)">💼 LinkedIn Message</button>
+                <div class="expand-content" style="display: none;">
+                    <div class="draft-box">
+                        <pre>Hi [First Name],
+
+Caught that Arbor Aesthetics is hitting the 20-year mark. That's a milestone—and we see a lot of owner-led service firms at that stage wrestling with the same thing: transitioning from "I do the work" to "I lead the people who do the work."
+
+We've helped founders navigate that shift. Worth a quick call if it's on your radar.
+
+Coach.Win</pre>
+                    </div>
+                </div>
+            </div>
+            <div class="expandable-section">
+                <button class="expand-btn" onclick="toggleExpand(this)">📢 LinkedIn Post Idea</button>
+                <div class="expand-content" style="display: none;">
+                    <div class="draft-box">
+                        <p>The Founder's Paradox: What Gets You to Year 5 Won't Get You to Year 20 | Arbor Aesthetics hits two decades—here's the inflection point every owner-led service company faces.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="company-card">
+            <div class="card-header">
+                <h3>Andrew Reise</h3>
+                <span class="score-badge" style="background-color: #16478e;">6/10 - WATCH</span>
+            </div>
+            <div class="signal-info">
+                <p><strong>Signal:</strong> Growth + Industry Recognition</p>
+                <p>Forrester recognition, active hiring (3 roles), Andy Mattox publishing AI/CX content.</p>
+            </div>
+            <div class="contacts-info">
+                <p><strong>Contacts:</strong> Andy Mattox (andy.mattox@andrewreise.com), Jeff Lewandowski (jeff.lewandowski@andrewreise.com), Tim Carrigan (tim.carrigan@andrewreise.com)</p>
+            </div>
+            <div class="expandable-section">
+                <button class="expand-btn" onclick="toggleExpand(this)">📧 Email Draft</button>
+                <div class="expand-content" style="display: none;">
+                    <div class="draft-box">
+                        <p><strong>Subject:</strong> Scaling a Consulting Firm Without Losing What Made You Good</p>
+                        <pre>Hi [First Name],
+
+Your Forrester recognition is well-deserved—and it looks like Andrew Reise is in growth mode (we see three open roles on your site). That's the good news.
+
+Here's the pattern we see with consulting firms around your size: you're hitting the point where scaling becomes about more than just hiring smart people. It's about keeping the quality and culture consistent when you're not in every client engagement anymore.
+
+The firms that pull this off are intentional about two things: they codify what made them successful in the first place, and they build a leadership bench that can replicate it. They don't try to scale by cloning founders—they scale by building a playbook and leaders who own it.
+
+Worth a conversation if you're thinking about how to grow without losing the edge that got you the Forrester nod.
+
+Best,
+Coach.Win Team</pre>
+                    </div>
+                </div>
+            </div>
+            <div class="expandable-section">
+                <button class="expand-btn" onclick="toggleExpand(this)">💼 LinkedIn Message</button>
+                <div class="expand-content" style="display: none;">
+                    <div class="draft-box">
+                        <pre>Hi [First Name],
+
+Saw the Forrester recognition—nice work. And you're hiring, which tells us you're ready to scale.
+
+We work with consulting firms in that 50-person range on the exact challenge: how do you grow without losing the quality and culture that made you recognizable in the first place? It's a specific playbook.
+
+Let's talk.
+
+Coach.Win</pre>
+                    </div>
+                </div>
+            </div>
+            <div class="expandable-section">
+                <button class="expand-btn" onclick="toggleExpand(this)">📢 LinkedIn Post Idea</button>
+                <div class="expand-content" style="display: none;">
+                    <div class="draft-box">
+                        <p>The 50-Person Inflection Point | Why consulting firms hit a wall at this size (and how to break through).</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="company-card">
+            <div class="card-header">
+                <h3>Holliday Energy Law Group</h3>
+                <span class="score-badge" style="background-color: #16478e;">8/10 - HOT</span>
+            </div>
+            <div class="signal-info">
+                <p><strong>Signal:</strong> Explosive Growth</p>
+                <p>Aggie 100 rank 29 with 68.76% CAGR, hiring attorneys across 6 states, expanding capabilities.</p>
+            </div>
+            <div class="contacts-info">
+                <p><strong>Contacts:</strong> Ben Holliday (ben@theenergylawgroup.com), Jeremy Horn (jeremy@theenergylawgroup.com), Nieve Leonor (nieve@theenergylawgroup.com)</p>
+            </div>
+            <div class="expandable-section">
+                <button class="expand-btn" onclick="toggleExpand(this)">📧 Email Draft</button>
+                <div class="expand-content" style="display: none;">
+                    <div class="draft-box">
+                        <p><strong>Subject:</strong> Sustaining 69% Growth (Your Systems Will Be Your Ceiling)</p>
+                        <pre>Hi [First Name],
+
+Congratulations on the Aggie 100 ranking—and that 68.76% CAGR. That's explosive growth.
+
+Here's what we know about firms at your growth rate: you're not hitting a talent wall yet. You're about to hit a systems wall. And it happens faster than you'd expect.
+
+Companies growing 69% year-over-year outgrow their systems, processes, and culture every 18 months. You know this rhythm: you build what works, it runs for a year, then suddenly it doesn't scale anymore. So you rebuild. Repeat.
+
+The firms that break out of that cycle do something specific: they get ahead of the growth curve by building infrastructure that anticipates the next stage. Not perfectly—but intentionally.
+
+When you're ready to move from "we'll figure it out" to "we've got this built," worth a conversation.
+
+Best,
+Coach.Win Team</pre>
+                    </div>
+                </div>
+            </div>
+            <div class="expandable-section">
+                <button class="expand-btn" onclick="toggleExpand(this)">💼 LinkedIn Message</button>
+                <div class="expand-content" style="display: none;">
+                    <div class="draft-box">
+                        <pre>Hi [First Name],
+
+Holliday Energy Law Group's growth is insane—68.76% CAGR on the Aggie 100 list. That's a different league.
+
+Here's the thing: at that growth rate, your systems are your ceiling. Not talent. Not market. Systems.
+
+We specialize in helping rapidly-scaling firms anticipate and build the infrastructure to sustain that kind of growth. It's a specific playbook.
+
+Worth a call.
+
+Coach.Win</pre>
+                    </div>
+                </div>
+            </div>
+            <div class="expandable-section">
+                <button class="expand-btn" onclick="toggleExpand(this)">📢 LinkedIn Post Idea</button>
+                <div class="expand-content" style="display: none;">
+                    <div class="draft-box">
+                        <p>The 68% Growth Problem | Why fast-growing law firms plateau (and how to build for scale).</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+
+        <!-- No Findings Section -->
+        <h2 class="section-header">No Findings This Week (24 Companies)</h2>
+        <div class="accordion">
+            
+        <div class="accordion-item">
+            <button class="accordion-btn" onclick="toggleAccordion(this)">▸ AI ONE (7 companies)</button>
+            <div class="accordion-content" style="display: none;">
+                <ul>
+                    <li>CCE</li>
+                    <li>EAD/AI ONE</li>
+                    <li>Entresmart/AI ONE</li>
+                    <li>Heritage/AI ONE</li>
+                    <li>Metl-Fab</li>
+                    <li>Sower/AI ONE</li>
+                    <li>Todata/AI ONE</li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="accordion-item">
+            <button class="accordion-btn" onclick="toggleAccordion(this)">▸ Entresmart (8 companies)</button>
+            <div class="accordion-content" style="display: none;">
+                <ul>
+                    <li>Drew Radon Group</li>
+                    <li>Eggers Executive Search</li>
+                    <li>Hyde Park Mouldings Inc.</li>
+                    <li>Investors Realty Inc.</li>
+                    <li>NVK Learning</li>
+                    <li>National Radon Defense</li>
+                    <li>New Street Properties</li>
+                    <li>Restore Hyper Wellness</li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="accordion-item">
+            <button class="accordion-btn" onclick="toggleAccordion(this)">▸ Simons.Coach (9 companies)</button>
+            <div class="accordion-content" style="display: none;">
+                <ul>
+                    <li>Caring Solutions San Antonio</li>
+                    <li>DIFFCO</li>
+                    <li>EAD Corporate</li>
+                    <li>Heritage Communities</li>
+                    <li>Raphael & Raphael</li>
+                    <li>Sower Private Credit</li>
+                    <li>Sower Services</li>
+                    <li>ToData Analytics</li>
+                    <li>informativ</li>
+                </ul>
+            </div>
+        </div>
+        
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p>Collision Engine by Coach.Win | <a href="mailto:elevate@coach.win">elevate@coach.win</a> | <a href="https://coach.win">coach.win</a></p>
+        </div>
+    </div>
+
+    <script>
+        function toggleExpand(btn) {
+            const content = btn.nextElementSibling;
+            const isOpen = content.style.display !== 'none';
+            content.style.display = isOpen ? 'none' : 'block';
+            btn.style.fontWeight = isOpen ? '600' : '700';
+        }
+
+        function toggleAccordion(btn) {
+            const content = btn.nextElementSibling;
+            const isOpen = content.style.display !== 'none';
+            content.style.display = isOpen ? 'none' : 'block';
+
+            // Update arrow
+            const parent = btn.parentElement;
+            const allContent = parent.parentElement.querySelectorAll('.accordion-content');
+            const allBtns = parent.parentElement.querySelectorAll('.accordion-btn');
+
+            allContent.forEach(c => c.style.display = 'none');
+            allBtns.forEach(b => b.textContent = b.textContent.replace('▾', '▸'));
+
+            if (!isOpen) {
+                content.style.display = 'block';
+                btn.textContent = btn.textContent.replace('▸', '▾');
+            }
+        }
+    </script>
+</body>
+</html>
