@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Collision Engine — Coach.Win</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Oswald:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Montserrat', sans-serif; background: #f5f5f5; color: #333; min-height: 100vh; display: flex; flex-direction: column; }
+        .header { background: #16478e; color: white; padding: 40px 20px; text-align: center; }
+        .header img { max-height: 50px; margin-bottom: 16px; object-fit: contain; }
+        .header h1 { font-family: 'Oswald', sans-serif; font-size: 2.2em; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 8px; }
+        .header p { font-size: 1em; opacity: 0.85; }
+        .container { max-width: 800px; margin: 0 auto; padding: 40px 20px; flex: 1; }
+        .latest-card { background: white; border-radius: 8px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); padding: 32px; margin-bottom: 40px; text-align: center; border-left: 5px solid #16478e; }
+        .latest-card h2 { font-family: 'Oswald', sans-serif; text-transform: uppercase; font-size: 1.4em; color: #16478e; margin-bottom: 12px; letter-spacing: 1px; }
+        .latest-card .date { font-size: 1.1em; color: #63666b; margin-bottom: 20px; }
+        .latest-card a { display: inline-block; background: #16478e; color: white; padding: 14px 36px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 1em; transition: background 0.2s; }
+        .latest-card a:hover { background: #0e3468; }
+        .archive { background: white; border-radius: 8px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); padding: 32px; }
+        .archive h2 { font-family: 'Oswald', sans-serif; text-transform: uppercase; font-size: 1.2em; color: #434748; margin-bottom: 20px; letter-spacing: 1px; }
+        .archive ul { list-style: none; }
+        .archive li { padding: 12px 0; border-bottom: 1px solid #eee; }
+        .archive li:last-child { border-bottom: none; }
+        .archive a { color: #16478e; text-decoration: none; font-weight: 500; }
+        .archive a:hover { text-decoration: underline; }
+        .archive .meta { color: #63666b; font-size: 0.9em; margin-left: 12px; }
+        .footer { background: #434748; color: #c6c6c8; text-align: center; padding: 24px 20px; font-size: 0.85em; margin-top: 40px; }
+        .footer a { color: #c6c6c8; text-decoration: none; }
+        .footer a:hover { color: white; }
+        .empty-state { color: #63666b; font-style: italic; padding: 20px 0; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <img src="https://files.simons.coach/coachwin/brand/assets/logos/logo-reverse-white-blue.svg" alt="Coach.Win">
+        <h1>Collision Engine</h1>
+        <p>AI-Powered Weekly Intelligence for Go-To-Market Outreach</p>
+    </div>
+    <div class="container">
+        <div class="latest-card" id="latest-card">
+            <h2>Latest Weekly Report</h2>
+            <div class="date" id="latest-date">Loading...</div>
+            <a href="#" id="latest-link">View Dashboard</a>
+        </div>
+        <div class="archive">
+            <h2>Archive</h2>
+            <ul id="archive-list">
+                <li class="empty-state">Loading dashboard archive...</li>
+            </ul>
+        </div>
+    </div>
+    <div class="footer">
+        Collision Engine by <a href="https://coach.win">Coach.Win</a> &nbsp;|&nbsp;
+        <a href="mailto:elevate@coach.win">elevate@coach.win</a> &nbsp;|&nbsp;
+        &copy; 2026 Coach.Win, Inc.
+    </div>
+    <script>
+        const dashboards = [
+            { date: "2026-04-14", file: "dashboards/collision-dashboard-2026-04-14.html", signals: 9, companies: 3 }
+        ];
+        function formatDate(dateStr) {
+            const d = new Date(dateStr + 'T12:00:00');
+            return d.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        }
+        function init() {
+            if (dashboards.length === 0) {
+                document.getElementById('latest-card').innerHTML = '<h2>No Reports Yet</h2><p class="empty-state">The first weekly scan will appear here after Monday.</p>';
+                document.getElementById('archive-list').innerHTML = '<li class="empty-state">No archived reports yet.</li>';
+                return;
+            }
+            dashboards.sort((a, b) => b.date.localeCompare(a.date));
+            const latest = dashboards[0];
+            document.getElementById('latest-date').textContent = formatDate(latest.date);
+            document.getElementById('latest-link').href = latest.file;
+            const list = document.getElementById('archive-list');
+            if (dashboards.length <= 1) {
+                list.innerHTML = '<li class="empty-state">Previous reports will appear here after the next weekly scan.</li>';
+            } else {
+                list.innerHTML = dashboards.map(d =>
+                    '<li><a href="' + d.file + '">Week of ' + formatDate(d.date) + '</a><span class="meta">' + d.signals + ' signals · ' + d.companies + ' priority companies</span></li>'
+                ).join('');
+            }
+        }
+        init();
+    </script>
+</body>
+</html>
