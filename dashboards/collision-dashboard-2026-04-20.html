@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Collision Engine — Week of 2026-04-20</title>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Montserrat', 'Segoe UI', sans-serif; background: #f5f5f5; color: #434748; line-height: 1.6; }
+
+/* Header */
+.header {
+    background: #16478e;
+    color: white;
+    padding: 30px 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+.header-left { display: flex; align-items: center; gap: 20px; }
+.header-logo { height: 48px; }
+.header h1 {
+    font-family: 'Oswald', sans-serif;
+    font-size: 28px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    font-weight: 500;
+}
+.header .scan-date {
+    font-size: 14px;
+    opacity: 0.85;
+    font-weight: 500;
+}
+
+/* Summary cards */
+.summary-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+    padding: 24px 40px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+.summary-card {
+    background: white;
+    border-radius: 8px;
+    padding: 20px 24px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    text-align: center;
+}
+.summary-card .number {
+    font-family: 'Oswald', sans-serif;
+    font-size: 36px;
+    color: #16478e;
+    font-weight: 600;
+}
+.summary-card .label {
+    font-size: 13px;
+    color: #63666b;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-top: 4px;
+}
+
+/* Priority section */
+.section-header {
+    font-family: 'Oswald', sans-serif;
+    font-size: 20px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: #16478e;
+    padding: 20px 40px 8px;
+    max-width: 1200px;
+    margin: 0 auto;
+    border-bottom: 2px solid #16478e;
+}
+
+/* Company cards */
+.cards-container {
+    max-width: 1200px;
+    margin: 16px auto;
+    padding: 0 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.company-card {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    overflow: hidden;
+    transition: box-shadow 0.2s;
+}
+.company-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.14); }
+.card-header {
+    padding: 20px 24px;
+    cursor: pointer;
+    user-select: none;
+}
+.card-title-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.card-title-row h3 {
+    font-family: 'Oswald', sans-serif;
+    font-size: 18px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #16478e;
+    flex: 1;
+}
+.expand-icon {
+    font-size: 12px;
+    color: #63666b;
+    transition: transform 0.2s;
+}
+.company-card.expanded .expand-icon { transform: rotate(180deg); }
+.card-desc {
+    font-size: 13px;
+    color: #63666b;
+    margin-top: 6px;
+}
+.card-meta {
+    display: flex;
+    gap: 24px;
+    margin-top: 8px;
+    font-size: 13px;
+    flex-wrap: wrap;
+}
+.card-meta a { color: #16478e; text-decoration: none; }
+.card-meta a:hover { text-decoration: underline; }
+
+.card-body {
+    display: none;
+    padding: 0 24px 24px;
+    border-top: 1px solid #e8e8e8;
+}
+.company-card.expanded .card-body { display: block; }
+
+.signals-section h4, .drafts-section h4 {
+    font-family: 'Oswald', sans-serif;
+    font-size: 15px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #434748;
+    margin: 16px 0 8px;
+}
+.signal-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 8px;
+}
+.signal-type {
+    font-weight: 600;
+    font-size: 13px;
+    color: #434748;
+}
+.signal-date {
+    font-size: 12px;
+    color: #63666b;
+}
+.signal-summary {
+    font-size: 14px;
+    color: #434748;
+    margin: 4px 0 12px;
+    padding-left: 4px;
+    line-height: 1.5;
+}
+
+/* Score badges */
+.score-badge {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+.score-badge.high { background: #16478e; color: white; }
+.score-badge.medium { background: #6ba3d6; color: white; }
+.score-badge.low { background: #c6c6c8; color: #434748; }
+
+/* Draft boxes */
+.draft-box {
+    background: #f9f9fb;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin: 12px 0;
+}
+.draft-signal-ref {
+    font-size: 13px;
+    font-weight: 600;
+    color: #16478e;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #e0e0e0;
+}
+.draft-section {
+    margin: 16px 0;
+}
+.draft-section h4 {
+    font-family: 'Oswald', sans-serif;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #16478e;
+    margin-bottom: 6px;
+}
+.draft-meta {
+    font-size: 13px;
+    color: #63666b;
+    margin-bottom: 4px;
+}
+.draft-content {
+    font-size: 14px;
+    line-height: 1.65;
+    color: #434748;
+    background: white;
+    border: 1px solid #e8e8e8;
+    border-radius: 6px;
+    padding: 14px 16px;
+    margin-top: 6px;
+}
+.draft-content p { margin-bottom: 8px; }
+.linkedin-post {
+    background: #f0f4f8;
+    border-color: #d0d8e0;
+}
+
+/* No signals */
+.no-signals {
+    max-width: 1200px;
+    margin: 16px auto;
+    padding: 0 40px;
+}
+.no-signals-box {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    padding: 20px 24px;
+}
+.no-signals-box ul {
+    columns: 2;
+    list-style: none;
+    padding: 0;
+    margin-top: 10px;
+}
+.no-signals-box li {
+    font-size: 14px;
+    padding: 4px 0;
+    color: #63666b;
+}
+.no-signals-box li::before {
+    content: "—";
+    margin-right: 8px;
+    color: #c6c6c8;
+}
+
+/* Footer */
+.footer {
+    background: #434748;
+    color: #c6c6c8;
+    padding: 20px 40px;
+    text-align: center;
+    font-size: 12px;
+    margin-top: 40px;
+}
+.footer a { color: #6ba3d6; text-decoration: none; }
+
+/* Copy buttons */
+.copy-btn {
+    display: inline-block;
+    background: #16478e;
+    color: white;
+    border: none;
+    padding: 4px 12px;
+    border-radius: 4px;
+    font-size: 11px;
+    cursor: pointer;
+    margin-left: 8px;
+    font-family: 'Montserrat', sans-serif;
+    vertical-align: middle;
+}
+.copy-btn:hover { background: #1a5aad; }
+.copy-btn.copied { background: #6ba3d6; }
+
+@media (max-width: 768px) {
+    .header { padding: 20px; }
+    .summary-row { padding: 16px 20px; }
+    .cards-container { padding: 0 20px; }
+    .no-signals { padding: 0 20px; }
+    .section-header { padding: 16px 20px 8px; }
+    .no-signals-box ul { columns: 1; }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+    <div class="header-left">
+        <img src="https://files.simons.coach/coachwin/brand/assets/logos/logo-reverse-white-blue.png" alt="Coach.Win" class="header-logo" onerror="this.style.display='none'">
+        <div>
+            <h1>Collision Engine — Weekly Intelligence</h1>
+            <div class="scan-date">Scan Date: 2026-04-20 &nbsp;|&nbsp; Powered by Coach.Win AI</div>
+        </div>
+    </div>
+</div>
+
+<div class="summary-row">
+    <div class="summary-card">
+        <div class="number">21</div>
+        <div class="label">Companies Scanned</div>
+    </div>
+    <div class="summary-card">
+        <div class="number">15</div>
+        <div class="label">Signals Found</div>
+    </div>
+    <div class="summary-card">
+        <div class="number">11</div>
+        <div class="label">High Priority (7+)</div>
+    </div>
+    <div class="summary-card">
+        <div class="number">11</div>
+        <div class="label">No Findings</div>
+    </div>
+</div>
+
+<div class="section-header">Priority Outreach — Ranked by Signal Score</div>
+
+<div class="cards-container">
+
+    <div class="company-card" id="national_radon_defense">
+        <div class="card-header" onclick="this.parentElement.classList.toggle('expanded')">
+            <div class="card-title-row">
+                <h3>National Radon Defense</h3>
+                <span class="score-badge high">10/10</span>
+                <span class="expand-icon">&#9660;</span>
+            </div>
+            <p class="card-desc">North America's largest radon network spanning 34 states and 2 Canadian provinces. Founded by Curt Drew in Omaha.</p>
+            <div class="card-meta">
+                <span><strong>Contacts:</strong> Curt Drew, Anthony Maeser, Leif Hansen, Samantha Payne</span>
+                <span class="website"><a href="https://nationalradondefense.com" target="_blank">nationalradondefense.com</a></span>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="signals-section">
+                <h4>Signals</h4>
+                
+        <div class="signal-row">
+            <span class="signal-type">Strategic Move</span>
+            <span class="score-badge high">10/10</span>
+            <span class="signal-date">2026-04-01</span>
+        </div>
+        <p class="signal-summary">Strategic partnership with FranNet announced April 1, 2026 to expand franchise access nationwide. NRD is recruiting new franchise owners with FranNet's advisory network.</p>
+        
+        <div class="signal-row">
+            <span class="signal-type">Industry Event</span>
+            <span class="score-badge high">9/10</span>
+            <span class="signal-date">2026-04-23</span>
+        </div>
+        <p class="signal-summary">Curt Drew attending the 2026 EOS Conference in Kansas City, April 23-24 — this week.</p>
+        
+            </div>
+            <div class="drafts-section">
+                <h4>Draft Outreach</h4>
+                
+            <div class="draft-box">
+                <div class="draft-signal-ref">FranNet partnership to expand franchise access nationwide (April 1, 2026) + EOS Conference this week</div>
+                
+                <div class="draft-section">
+                    <h4>Email Draft</h4>
+                    <div class="draft-meta">Subject: <strong>Your FranNet move — seen this pattern before</strong></div>
+                    <div class="draft-meta">To: Curt Drew, Anthony Maeser, Leif Hansen, Samantha Payne</div>
+                    <div class="draft-content"><p>Hi [First Name],</p><p>Saw the FranNet partnership announcement. That's a big move — connecting qualified entrepreneurs with a proven model is exactly how you scale a network without diluting what makes it work.</p><p>Here's the pattern we see with companies at your stage: the franchise model works brilliantly... until it doesn't. The gap isn't the system. It's alignment. When you're onboarding new owners across 34+ states, the thing nobody tells you is that your biggest risk isn't finding the right franchisees — it's keeping everyone rowing in the same direction once you do.</p><p>We've worked with a handful of franchise-model companies through exactly this inflection point. The ones that nail it build what we call a &quot;cascading clarity&quot; structure — where your strategic priorities flow from headquarters to every franchise owner without getting lost in translation.</p><p>I know you're running on EOS, which is a solid operating system. But there's a layer above the operating system — the strategic layer — where most fast-growing networks leave gaps.</p><p>Would love to share what we've seen work. Coffee or a quick call sometime?</p><p>— Coach John</p></div>
+                </div>
+                
+                <div class="draft-section">
+                    <h4>LinkedIn Message</h4>
+                    <div class="draft-content"><p>Curt — congrats on the FranNet partnership. That's a smart way to scale without compromising quality. We work with owner-led companies navigating exactly this kind of growth inflection, and I'd love to share a pattern we've seen work well for franchise networks expanding this fast. Worth a quick conversation?</p></div>
+                </div>
+                
+                <div class="draft-section">
+                    <h4>LinkedIn Post Idea</h4>
+                    <div class="draft-content linkedin-post"><p>Everyone wants to scale their franchise network.</p><p>Almost nobody talks about what breaks when you do.</p><p>Here's the pattern we see about 400 times: Company builds a great model. Proves it works. Partners with a franchise advisory network to expand.</p><p>Then the real work starts.</p><p>Because the challenge isn't finding franchise owners. It's keeping 50+ independent operators aligned on what matters when they're spread across 34 states.</p><p>The operating system (EOS, Scaling Up, whatever you run) handles the rhythm. But rhythm without strategic clarity is just people meeting on Tuesdays.</p><p>The companies that scale well build what we call &quot;cascading clarity&quot; — where priorities flow from headquarters to every operator without getting translated into something unrecognizable.</p><p>The ones that don't? They end up with 50 versions of the brand and wonder why quality varies by zip code.</p><p>Sound familiar?</p></div>
+                </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="company-card" id="heritage_communities">
+        <div class="card-header" onclick="this.parentElement.classList.toggle('expanded')">
+            <div class="card-title-row">
+                <h3>Heritage Communities</h3>
+                <span class="score-badge high">9/10</span>
+                <span class="expand-icon">&#9660;</span>
+            </div>
+            <p class="card-desc">Omaha-based senior living operator — independent, assisted, and memory care across NE, IA, AZ, KS, MO, TX.</p>
+            <div class="card-meta">
+                <span><strong>Contacts:</strong> Amy Birkel, Farhan Khan, John Pryor, Debbie Petru</span>
+                <span class="website"><a href="https://heritage-communities.com" target="_blank">heritage-communities.com</a></span>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="signals-section">
+                <h4>Signals</h4>
+                
+        <div class="signal-row">
+            <span class="signal-type">Growth Signal</span>
+            <span class="score-badge high">9/10</span>
+            <span class="signal-date">2026-02-09</span>
+        </div>
+        <p class="signal-summary">Expanded portfolio by 33% in Feb 2026 — added 6 new communities in KS and MO under new 'SageGrove' brand. Now manages 25 communities across 6 states.</p>
+        
+            </div>
+            <div class="drafts-section">
+                <h4>Draft Outreach</h4>
+                
+            <div class="draft-box">
+                <div class="draft-signal-ref">33% portfolio expansion — 6 new SageGrove communities in KS and MO</div>
+                
+                <div class="draft-section">
+                    <h4>Email Draft</h4>
+                    <div class="draft-meta">Subject: <strong>Growing into 6 states — that changes everything</strong></div>
+                    <div class="draft-meta">To: Amy Birkel, Farhan Khan, John Pryor, Debbie Petru</div>
+                    <div class="draft-content"><p>Hi [First Name],</p><p>Just read about Heritage adding six SageGrove communities in Kansas and Missouri. A 33% portfolio jump in one quarter — that's not incremental growth. That's a fundamentally different company.</p><p>Here's what we've seen with operators who cross this threshold: the playbook that got you to 19 communities doesn't work for 25. And it definitely won't work for 35.</p><p>The hard part isn't the operations — you clearly know how to run communities. The hard part is keeping your leadership team aligned when you're managing across six states, integrating a new brand, and onboarding teams who didn't grow up in the Heritage culture.</p><p>We work with fast-growing owner-led companies in exactly this kind of scaling moment. The question we'd ask: does your leadership team have a shared language for making decisions across all 25 communities? Or are you starting to see different interpretations of &quot;the Heritage way&quot; depending on the state?</p><p>Would be happy to share what we've seen work for multi-state operators. No pitch — just a conversation.</p><p>— Rob</p></div>
+                </div>
+                
+                <div class="draft-section">
+                    <h4>LinkedIn Message</h4>
+                    <div class="draft-content"><p>Just saw the SageGrove launch — six new communities, two new states, 33% growth. That's a whole different company. We work with operators navigating exactly this kind of multi-state scaling challenge. Would love to share what we've seen work. Worth a conversation?</p></div>
+                </div>
+                
+                <div class="draft-section">
+                    <h4>LinkedIn Post Idea</h4>
+                    <div class="draft-content linkedin-post"><p>Growing from 19 locations to 25 sounds like &quot;more of the same.&quot;</p><p>It's not.</p><p>When you cross from a handful of states to six, something shifts. The decisions that used to happen in a hallway now happen over Zoom. The culture that used to be obvious now needs to be intentional.</p><p>Here's the thing nobody tells you about multi-state expansion: your biggest risk isn't operational. It's interpretive.</p><p>What does &quot;quality&quot; mean in Kansas vs. Nebraska?<br>What does &quot;the right way&quot; look like when half your teams have never met each other?</p><p>The companies that scale well don't just add locations. They build decision-making frameworks that travel.</p><p>The ones that don't end up with a great brand in their home market and a confusing one everywhere else.</p><p>In our experience, the fix is simpler than you'd think — but it has to be done on purpose.</p></div>
+                </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="company-card" id="ead_corporate">
+        <div class="card-header" onclick="this.parentElement.classList.toggle('expanded')">
+            <div class="card-title-row">
+                <h3>EAD Corporate</h3>
+                <span class="score-badge high">9/10</span>
+                <span class="expand-icon">&#9660;</span>
+            </div>
+            <p class="card-desc">Omaha-based engineering, automation, and construction management firm. CEO Steve Lichter. Serves pharma, logistics, F&amp;B, and data centers.</p>
+            <div class="card-meta">
+                <span><strong>Contacts:</strong> Stephen Lichter, Sally White, Brian Klausen</span>
+                <span class="website"><a href="https://eadcorporate.com" target="_blank">eadcorporate.com</a></span>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="signals-section">
+                <h4>Signals</h4>
+                
+        <div class="signal-row">
+            <span class="signal-type">Growth Signal</span>
+            <span class="score-badge high">9/10</span>
+            <span class="signal-date">2026-01-15</span>
+        </div>
+        <p class="signal-summary">Leased a 117,000 sq ft manufacturing facility in Blaine, MN for data center liquid cooling production. Expected to employ 175+ people. Production starting early 2026.</p>
+        
+        <div class="signal-row">
+            <span class="signal-type">Strategic Move</span>
+            <span class="score-badge medium">7/10</span>
+            <span class="signal-date">2026-03-01</span>
+        </div>
+        <p class="signal-summary">Announced partnership with IRLCA to shape compliance and engineering for life sciences sector.</p>
+        
+            </div>
+            <div class="drafts-section">
+                <h4>Draft Outreach</h4>
+                
+            <div class="draft-box">
+                <div class="draft-signal-ref">New 117K sq ft Blaine, MN facility + 175 planned hires for data center liquid cooling</div>
+                
+                <div class="draft-section">
+                    <h4>Email Draft</h4>
+                    <div class="draft-meta">Subject: <strong>175 new hires and a new facility — the part nobody plans for</strong></div>
+                    <div class="draft-meta">To: Stephen Lichter, Sally White, Brian Klausen</div>
+                    <div class="draft-content"><p>Hi [First Name],</p><p>The Blaine facility announcement caught my attention — 117,000 square feet for liquid cooling production, 175+ new employees. That's not a side project. That's a company within a company.</p><p>Here's the pattern we see with engineering firms hitting this kind of growth: the technical side is usually dialed in. You wouldn't have gotten here otherwise. But the leadership side — keeping your Omaha team and your Blaine team aligned on priorities, making sure your culture survives the expansion, ensuring that the data center division doesn't accidentally become a separate company — that's where things get complicated.</p><p>We work with fast-growing owner-led companies navigating this exact inflection. The question we'd ask you: when Blaine is fully operational with 175 people, how does your leadership team make decisions across two sites without everything becoming a two-week email chain?</p><p>Happy to share a framework we use with multi-site operators. Just a conversation — no strings.</p><p>— Coach John</p></div>
+                </div>
+                
+                <div class="draft-section">
+                    <h4>LinkedIn Message</h4>
+                    <div class="draft-content"><p>Steve — the Blaine facility is a big move. 117K square feet and 175+ hires puts EAD in a different weight class. We work with engineering and manufacturing leaders managing exactly this kind of multi-site growth. Would love to share what we've seen work. Quick call?</p></div>
+                </div>
+                
+                <div class="draft-section">
+                    <h4>LinkedIn Post Idea</h4>
+                    <div class="draft-content linkedin-post"><p>Opening a second facility sounds exciting on the press release.</p><p>Six months in, it feels like running two different companies.</p><p>Here's what actually happens when you go from one site to two:</p><p>— Decisions that took 5 minutes now take 5 days<br>— Culture diverges faster than you'd believe<br>— Your A-players at the new site start building their own playbook</p><p>None of this is a sign of failure. It's a sign of growth.</p><p>But the companies that handle it well do one thing differently: they build the leadership alignment framework BEFORE the second site is operational. Not after.</p><p>Because once 175 people are on the ground, you're reacting. And reacting is expensive.</p></div>
+                </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="company-card" id="todata_analytics">
+        <div class="card-header" onclick="this.parentElement.classList.toggle('expanded')">
+            <div class="card-title-row">
+                <h3>ToData Analytics</h3>
+                <span class="score-badge high">8/10</span>
+                <span class="expand-icon">&#9660;</span>
+            </div>
+            <p class="card-desc">Omaha-based analytics company serving clinical research sites. Products: SiteGrades, Tod AI. CCO Andrew Kimball.</p>
+            <div class="card-meta">
+                <span><strong>Contacts:</strong> Andrew Kimball, Barb Geiger, Ben Titus</span>
+                <span class="website"><a href="https://todata.com" target="_blank">todata.com</a></span>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="signals-section">
+                <h4>Signals</h4>
+                
+        <div class="signal-row">
+            <span class="signal-type">Strategic Move</span>
+            <span class="score-badge high">8/10</span>
+            <span class="signal-date">2026-02-01</span>
+        </div>
+        <p class="signal-summary">Tekton Research selected Todata's SiteGrades and Tod AI as their enterprise BI solution — major enterprise customer win.</p>
+        
+        <div class="signal-row">
+            <span class="signal-type">Strategic Move</span>
+            <span class="score-badge medium">7/10</span>
+            <span class="signal-date">2026-01-21</span>
+        </div>
+        <p class="signal-summary">CRIO partnership established SiteGrades as an analytics partner in CRIO's Partners Program for clinical research sites.</p>
+        
+            </div>
+            <div class="drafts-section">
+                <h4>Draft Outreach</h4>
+                
+            <div class="draft-box">
+                <div class="draft-signal-ref">Tekton Research enterprise customer win + CRIO partnership</div>
+                
+                <div class="draft-section">
+                    <h4>Email Draft</h4>
+                    <div class="draft-meta">Subject: <strong>Enterprise wins change a company — here's how</strong></div>
+                    <div class="draft-meta">To: Andrew Kimball, Barb Geiger, Ben Titus</div>
+                    <div class="draft-content"><p>Hi [First Name],</p><p>Congrats on the Tekton Research deal and the CRIO partnership. Landing enterprise customers while building a partner ecosystem — that's a sign the product has crossed a threshold.</p><p>Here's what we've seen happen next, and it's not what most founders expect: the product-market fit that got you here starts pulling your team in three directions at once. Enterprise customers want customization. Partners want integration. Your roadmap wants focus. And suddenly you're having the same argument in every leadership meeting.</p><p>We work with fast-growing tech companies at exactly this stage. The ones that scale well don't just hire more people — they build a strategic framework that helps the team say &quot;no&quot; to the right things.</p><p>Tod AI and SiteGrades are clearly solving real problems. The question is: does your leadership team have a shared playbook for deciding what to build next vs. what to say no to?</p><p>Happy to share what we've seen work. No pitch — just a conversation between people who think about growth.</p><p>— Rob</p></div>
+                </div>
+                
+                <div class="draft-section">
+                    <h4>LinkedIn Message</h4>
+                    <div class="draft-content"><p>Andrew — congrats on the Tekton Research win and the CRIO partnership. That's a big quarter. We work with fast-growing tech companies navigating exactly the scaling challenges that come after product-market fit. Would love to compare notes — worth a quick call?</p></div>
+                </div>
+                
+                <div class="draft-section">
+                    <h4>LinkedIn Post Idea</h4>
+                    <div class="draft-content linkedin-post"><p>The best problem in business: your product works and everyone wants it.</p><p>The hardest problem in business: deciding what to build next when everyone wants something different.</p><p>Enterprise customers want customization.<br>Partners want integration.<br>Your team wants to ship the roadmap.</p><p>And suddenly every leadership meeting is the same argument in a different outfit.</p><p>Here's the thing: this isn't a product problem. It's a strategy problem.</p><p>The companies that scale past this point build what Roger Martin would call a &quot;choice cascade&quot; — a framework for deciding what to do AND what to stop doing.</p><p>The ones that don't end up with a bloated product, a burned-out team, and a strategy that's really just a list of everything everyone asked for.</p><p>Sound familiar?</p></div>
+                </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="company-card" id="diffco">
+        <div class="card-header" onclick="this.parentElement.classList.toggle('expanded')">
+            <div class="card-title-row">
+                <h3>DIFFCO</h3>
+                <span class="score-badge high">8/10</span>
+                <span class="expand-icon">&#9660;</span>
+            </div>
+            <p class="card-desc">Houston-based civil construction and industrial development company. Developing Gulf Inland Logistics Park.</p>
+            <div class="card-meta">
+                <span><strong>Contacts:</strong> Matt Diffendal, Tina Diffendal, Marty Spake</span>
+                <span class="website"><a href="https://diffco.com" target="_blank">diffco.com</a></span>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="signals-section">
+                <h4>Signals</h4>
+                
+        <div class="signal-row">
+            <span class="signal-type">Growth Signal</span>
+            <span class="score-badge high">8/10</span>
+            <span class="signal-date">2026-01-13</span>
+        </div>
+        <p class="signal-summary">Gulf Inland Logistics Park Phase I opened with 7 tenants, 400+ jobs, $250M invested. Phase II pending for 2026. Also completed 7th industrial aggregation fund deployment.</p>
+        
+        <div class="signal-row">
+            <span class="signal-type">Industry Event</span>
+            <span class="score-badge medium">6/10</span>
+            <span class="signal-date">2026-03-01</span>
+        </div>
+        <p class="signal-summary">Supported nominees and winners at 2026 ASA Excellence in Construction awards.</p>
+        
+            </div>
+            <div class="drafts-section">
+                <h4>Draft Outreach</h4>
+                
+            <div class="draft-box">
+                <div class="draft-signal-ref">Gulf Inland Logistics Park Phase I launched, Phase II pending, 7th fund deployed</div>
+                
+                <div class="draft-section">
+                    <h4>Email Draft</h4>
+                    <div class="draft-meta">Subject: <strong>$250M invested, Phase II on deck — what's the leadership plan?</strong></div>
+                    <div class="draft-meta">To: Matt Diffendal, Tina Diffendal, Marty Spake</div>
+                    <div class="draft-content"><p>Hi [First Name],</p><p>Gulf Inland Logistics Park Phase I — 7 tenants, 400+ jobs, $250M invested. And Phase II already on deck. That's a serious operation.</p><p>Here's what we've learned working with companies deploying capital at this pace: the deals side usually works. You know how to source, structure, and close. The part that catches people off guard is the organizational complexity that follows.</p><p>When you're running a construction company, managing an industrial park, deploying a 7th aggregation fund, AND planning Phase II — the number of decisions your leadership team has to make per week goes through the roof. And without a framework for prioritizing, everything becomes urgent.</p><p>We work with fast-growing owner-led companies navigating this exact kind of complexity. The question we'd ask: does your leadership team have a clear way to decide which of the seven things on fire today actually matters most?</p><p>Would love to share a framework we use with operators in heavy capital deployment mode. Just a conversation.</p><p>— Coach John</p></div>
+                </div>
+                
+                <div class="draft-section">
+                    <h4>LinkedIn Message</h4>
+                    <div class="draft-content"><p>Matt — Phase I at Gulf Inland Logistics Park looks like a home run. 7 tenants, 400+ jobs. With Phase II coming and fund #7 deployed, the complexity is real. We work with operators managing this kind of multi-project scaling. Worth comparing notes over a quick call?</p></div>
+                </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="company-card" id="informativ">
+        <div class="card-header" onclick="this.parentElement.classList.toggle('expanded')">
+            <div class="card-title-row">
+                <h3>Informativ</h3>
+                <span class="score-badge medium">7/10</span>
+                <span class="expand-icon">&#9660;</span>
+            </div>
+            <p class="card-desc">Frisco, TX — fraud prevention, compliance, payments, and credit tech for automotive and consumer finance. CEO David Carner.</p>
+            <div class="card-meta">
+                <span><strong>Contacts:</strong> David Carner, Scott Rosenberg, Christina Wofford</span>
+                <span class="website"><a href="https://informativ.com" target="_blank">informativ.com</a></span>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="signals-section">
+                <h4>Signals</h4>
+                
+        <div class="signal-row">
+            <span class="signal-type">Strategic Move</span>
+            <span class="score-badge medium">7/10</span>
+            <span class="signal-date">2026-01-27</span>
+        </div>
+        <p class="signal-summary">Unveiled SmartPencil and Payments API at NADA 2026 in Las Vegas. PE-backed (Capstreet) company in product expansion mode.</p>
+        
+            </div>
+            <div class="drafts-section">
+                <h4>Draft Outreach</h4>
+                
+            <div class="draft-box">
+                <div class="draft-signal-ref">SmartPencil and Payments API launched at NADA 2026, PE-backed growth</div>
+                
+                <div class="draft-section">
+                    <h4>Email Draft</h4>
+                    <div class="draft-meta">Subject: <strong>Two new products at NADA — what comes next</strong></div>
+                    <div class="draft-meta">To: David Carner, Scott Rosenberg, Christina Wofford</div>
+                    <div class="draft-content"><p>Hi [First Name],</p><p>SmartPencil and Payments API at NADA — that's a strong product push. When a PE-backed company launches two products in the same quarter, it usually means the growth plan is accelerating.</p><p>Here's the pattern we see: the product launches work. The press releases are great. But then comes the hard part — getting your growing team aligned on what success looks like when you're selling more products to more customers through more channels.</p><p>We work with fast-growing companies backed by private equity, and the challenge is almost always the same: the board wants growth metrics, the product team wants focus, and the sales team wants more to sell. Without a shared strategic framework, those priorities collide.</p><p>Would be worth a conversation about what we've seen work for PE-backed companies in product expansion mode. No pitch — just useful patterns.</p><p>— Rob</p></div>
+                </div>
+                
+                <div class="draft-section">
+                    <h4>LinkedIn Message</h4>
+                    <div class="draft-content"><p>David — congrats on the NADA launches. SmartPencil and Payments API in the same quarter is ambitious. We work with PE-backed companies navigating product expansion — would love to share what we've seen work at this stage. Quick call?</p></div>
+                </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="company-card" id="sower">
+        <div class="card-header" onclick="this.parentElement.classList.toggle('expanded')">
+            <div class="card-title-row">
+                <h3>Sower Investment Partners</h3>
+                <span class="score-badge medium">7/10</span>
+                <span class="expand-icon">&#9660;</span>
+            </div>
+            <p class="card-desc">Omaha-based alternative investment firm — farmland, commercial real estate, and private credit.</p>
+            <div class="card-meta">
+                <span><strong>Contacts:</strong> Janna Peterson, Jay Bortolini, Joe Platten, Jared Hollinger, Kali Gilbert</span>
+                <span class="website"><a href="https://sower.com" target="_blank">sower.com</a></span>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="signals-section">
+                <h4>Signals</h4>
+                
+        <div class="signal-row">
+            <span class="signal-type">Growth Signal</span>
+            <span class="score-badge medium">7/10</span>
+            <span class="signal-date">2026-01-01</span>
+        </div>
+        <p class="signal-summary">Deployed 7th industrial aggregation fund. Longview Fund II acquired Broadway Commons (136K SF, Rochester MN) and Batavia 165 (42K SF, IL).</p>
+        
+        <div class="signal-row">
+            <span class="signal-type">Leadership Change</span>
+            <span class="score-badge medium">7/10</span>
+            <span class="signal-date">2026-03-01</span>
+        </div>
+        <p class="signal-summary">Added Trey Castle as Investor Relations Operations Specialist in March 2026.</p>
+        
+            </div>
+            <div class="drafts-section">
+                <h4>Draft Outreach</h4>
+                
+            <div class="draft-box">
+                <div class="draft-signal-ref">7th fund deployed, multiple acquisitions, new IR hire</div>
+                
+                <div class="draft-section">
+                    <h4>Email Draft</h4>
+                    <div class="draft-meta">Subject: <strong>Fund #7 deployed, team growing — scaling an investment platform</strong></div>
+                    <div class="draft-meta">To: Janna Peterson, Jay Bortolini, Joe Platten, Jared Hollinger, Kali Gilbert</div>
+                    <div class="draft-content"><p>Hi [First Name],</p><p>Between the 7th fund deployment, the Broadway Commons and Batavia acquisitions, and bringing on Trey Castle for investor relations — Sower's had a busy quarter.</p><p>Here's what we've noticed working with investment firms at this stage: the deal flow is usually strong. What gets harder is the organizational side. When you're managing across farmland, commercial real estate, and private credit — each with its own team, timeline, and investor base — keeping everyone aligned on what matters most becomes the real competitive advantage.</p><p>We work with fast-growing companies where the leadership team has to manage complexity across multiple business lines. The ones that do it well have a shared framework for strategic priorities — not just deal-by-deal, but across the whole platform.</p><p>Worth a conversation? I'd love to share what we've seen work for multi-vertical investment platforms.</p><p>— Coach John</p></div>
+                </div>
+                
+                <div class="draft-section">
+                    <h4>LinkedIn Message</h4>
+                    <div class="draft-content"><p>Jared — busy quarter at Sower. 7th fund, new acquisitions, team growing. We work with investment firms managing complexity across multiple verticals. Would love to share what we've seen work at this stage. Quick conversation?</p></div>
+                </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="company-card" id="investors_realty">
+        <div class="card-header" onclick="this.parentElement.classList.toggle('expanded')">
+            <div class="card-title-row">
+                <h3>Investors Realty, Inc.</h3>
+                <span class="score-badge medium">6/10</span>
+                <span class="expand-icon">&#9660;</span>
+            </div>
+            <p class="card-desc">Omaha's leading commercial real estate firm. $2.45B+ brokered, 6M+ sq ft managed.</p>
+            <div class="card-meta">
+                <span><strong>Contacts:</strong> Laura Hansen, Tim Kerrigan, Ryan Zabrowski</span>
+                <span class="website"><a href="https://investorsomaha.com" target="_blank">investorsomaha.com</a></span>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="signals-section">
+                <h4>Signals</h4>
+                
+        <div class="signal-row">
+            <span class="signal-type">Content Activity</span>
+            <span class="score-badge medium">6/10</span>
+            <span class="signal-date">2026-01-15</span>
+        </div>
+        <p class="signal-summary">Leadership published bullish 2026 CRE market outlook. Sydney Weller earned CCIM designation. Company expecting busier year ahead.</p>
+        
+            </div>
+            <div class="drafts-section">
+                <h4>Draft Outreach</h4>
+                
+            <div class="draft-box">
+                <div class="draft-signal-ref">Bullish 2026 CRE outlook, team development (CCIM designation)</div>
+                
+                <div class="draft-section">
+                    <h4>Email Draft</h4>
+                    <div class="draft-meta">Subject: <strong>Busier year ahead — is the team ready?</strong></div>
+                    <div class="draft-meta">To: Laura Hansen, Tim Kerrigan, Ryan Zabrowski</div>
+                    <div class="draft-content"><p>Hi [First Name],</p><p>Read the REJournals piece about Investors Realty's outlook for 2026 — sounds like you're expecting a strong year. And congrats to Sydney Weller on the CCIM designation. That kind of team development says a lot about the culture.</p><p>Here's a question we ask companies heading into a growth year: is the team set up to capture the opportunity, or are you going to be playing catch-up by Q3?</p><p>The difference usually isn't talent — it's alignment. When the market's hot, everyone gets busy. But &quot;busy&quot; and &quot;focused on the right things&quot; aren't the same.</p><p>We work with leadership teams at growing companies to build quarterly game plans that keep priorities sharp even when the market is pulling you in ten directions. Would be happy to share what we've seen work for CRE teams heading into a strong market.</p><p>— Rob</p></div>
+                </div>
+                
+                <div class="draft-section">
+                    <h4>LinkedIn Message</h4>
+                    <div class="draft-content"><p>Laura — sounds like Investors Realty is expecting a big 2026. Congrats on Sydney's CCIM too. We help leadership teams at growing companies make sure they're focused on the right priorities when the market heats up. Worth a quick chat?</p></div>
+                </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="company-card" id="restore_hyper_wellness">
+        <div class="card-header" onclick="this.parentElement.classList.toggle('expanded')">
+            <div class="card-title-row">
+                <h3>Restore Hyper Wellness</h3>
+                <span class="score-badge medium">6/10</span>
+                <span class="expand-icon">&#9660;</span>
+            </div>
+            <p class="card-desc">National wellness franchise — cryotherapy, IV drips, red light therapy. #1 franchise ranking.</p>
+            <div class="card-meta">
+                <span><strong>Contacts:</strong> Kunal Rao, Victor Banda, Angelee Contreras</span>
+                <span class="website"><a href="https://restore.com" target="_blank">restore.com</a></span>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="signals-section">
+                <h4>Signals</h4>
+                
+        <div class="signal-row">
+            <span class="signal-type">Growth Signal</span>
+            <span class="score-badge medium">6/10</span>
+            <span class="signal-date">2026-01-01</span>
+        </div>
+        <p class="signal-summary">Ranked #1 in Entrepreneur's Franchise 500. New CEO Matt Vonderahe. 1,524 employees. Planning 20+ new Philadelphia locations.</p>
+        
+            </div>
+            <div class="drafts-section">
+                <h4>Draft Outreach</h4>
+                
+            <div class="draft-box">
+                <div class="draft-signal-ref">Franchise 500 #1 ranking, new CEO, 1,500+ employees, rapid expansion</div>
+                
+                <div class="draft-section">
+                    <h4>Email Draft</h4>
+                    <div class="draft-meta">Subject: <strong>#1 in Franchise 500 — what's the next challenge?</strong></div>
+                    <div class="draft-meta">To: Kunal Rao, Victor Banda, Angelee Contreras</div>
+                    <div class="draft-content"><p>Hi [First Name],</p><p>Being ranked #1 in the Franchise 500 is a big deal. And with a new CEO, 1,500+ employees, and expansion plans on the horizon — Restore is clearly in a different chapter.</p><p>Here's what we've seen with franchise leaders at this stage: the brand recognition and operational model are proven. But the leadership challenge shifts — it's less about proving the concept and more about keeping local operators aligned with the national vision while the market moves fast.</p><p>We work with fast-growing franchised businesses navigating this exact inflection. The question we'd ask: are your local market teams making decisions that ladder up to the national strategy, or are they solving problems in isolation?</p><p>Happy to share what we've seen work for franchise operators at scale. Just a conversation.</p><p>— Coach John</p></div>
+                </div>
+                
+                <div class="draft-section">
+                    <h4>LinkedIn Message</h4>
+                    <div class="draft-content"><p>Kunal — #1 in the Franchise 500 is impressive. With the new CEO and expansion plans, Restore's in a big growth moment. We work with franchise leaders navigating exactly this kind of scaling challenge. Worth a quick conversation?</p></div>
+                </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="company-card" id="holliday_energy">
+        <div class="card-header" onclick="this.parentElement.classList.toggle('expanded')">
+            <div class="card-title-row">
+                <h3>Holliday Energy Law Group</h3>
+                <span class="score-badge medium">6/10</span>
+                <span class="expand-icon">&#9660;</span>
+            </div>
+            <p class="card-desc">Energy law firm with explosive growth. Hosts the EnergyShip Summit.</p>
+            <div class="card-meta">
+                <span><strong>Contacts:</strong> Ben Holliday, Jeremy Horn, Nieve Leonor</span>
+                <span class="website"><a href="https://theenergylawgroup.com" target="_blank">theenergylawgroup.com</a></span>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="signals-section">
+                <h4>Signals</h4>
+                
+        <div class="signal-row">
+            <span class="signal-type">Growth Signal</span>
+            <span class="score-badge medium">6/10</span>
+            <span class="signal-date">2025-11-01</span>
+        </div>
+        <p class="signal-summary">Named #29 on 2024 Aggie 100 with 68.76% compound annual growth rate. Likely competing again in 2026 (nominations close May 31).</p>
+        
+            </div>
+            <div class="drafts-section">
+                <h4>Draft Outreach</h4>
+                
+            <div class="draft-box">
+                <div class="draft-signal-ref">68.76% CAGR — #29 on Aggie 100, likely competing again in 2026</div>
+                
+                <div class="draft-section">
+                    <h4>Email Draft</h4>
+                    <div class="draft-meta">Subject: <strong>69% growth rate — what breaks next?</strong></div>
+                    <div class="draft-meta">To: Ben Holliday, Jeremy Horn, Nieve Leonor</div>
+                    <div class="draft-content"><p>Hi [First Name],</p><p>A 68.76% compound annual growth rate is impressive by any measure. Being recognized on the Aggie 100 is well deserved.</p><p>Here's the honest truth about companies growing this fast: something is about to break. Not because you're doing anything wrong — but because the organization that handles $X in revenue doesn't work the same at $3X. It's physics, not failure.</p><p>We work with fast-growing, owner-led companies at exactly this inflection point. The question we'd ask: when your team doubled, did your decision-making process scale with it? Or are you still making decisions the same way you did when there were six of you in a room?</p><p>Would love to share what we've seen work for professional services firms growing at this pace. No pitch — just a pattern we think you'd find useful.</p><p>— Rob</p></div>
+                </div>
+                
+                <div class="draft-section">
+                    <h4>LinkedIn Message</h4>
+                    <div class="draft-content"><p>Ben — 69% CAGR is no joke. That kind of growth changes everything about how a firm operates. We work with fast-growing professional services firms navigating exactly this scaling challenge. Would love to compare notes. Quick call?</p></div>
+                </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+</div>
+
+<div class="section-header">No Findings This Week</div>
+<div class="no-signals">
+    <div class="no-signals-box">
+        <p style="font-size:14px;color:#63666b;">These companies had no actionable signals this week. They'll be scanned again next Monday.</p>
+        <ul>
+            <li>New Street Properties</li><li>NVK Learning</li><li>Hyde Park Mouldings</li><li>Eggers Executive Search</li><li>Andrew Reise</li><li>Arbor Aesthetics</li><li>Caring Solutions San Antonio</li><li>Raphael &amp; Raphael</li><li>Entresmart</li><li>CCE (Capitol City Electric)</li><li>Metl-Fab</li>
+        </ul>
+    </div>
+</div>
+
+<div class="footer">
+    <p>&copy; 2026 Coach.Win, Inc. &nbsp;|&nbsp; <a href="https://coach.win">coach.win</a> &nbsp;|&nbsp; <a href="mailto:elevate@coach.win">elevate@coach.win</a></p>
+    <p style="margin-top:6px;">Collision Engine v2.0 — AI-powered outreach intelligence</p>
+</div>
+
+<script>
+// Copy-to-clipboard for draft content
+document.querySelectorAll('.draft-content').forEach(el => {
+    const btn = document.createElement('button');
+    btn.className = 'copy-btn';
+    btn.textContent = 'Copy';
+    btn.onclick = function(e) {
+        e.stopPropagation();
+        const text = el.innerText;
+        navigator.clipboard.writeText(text).then(() => {
+            btn.textContent = 'Copied!';
+            btn.classList.add('copied');
+            setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+        });
+    };
+    el.parentElement.querySelector('h4').appendChild(btn);
+});
+
+// Auto-expand first card
+const first = document.querySelector('.company-card');
+if (first) first.classList.add('expanded');
+</script>
+
+</body>
+</html>
