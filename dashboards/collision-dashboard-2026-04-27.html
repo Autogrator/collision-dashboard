@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Collision Engine — Weekly Intelligence | April 27, 2026</title>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --coach-blue: #16478e;
+  --coach-blue-light: #6ba3d6;
+  --coach-blue-dark: #0e2f5e;
+  --cardinal-red: #bd2b36;
+  --bg: #f5f5f5;
+  --card-bg: #ffffff;
+  --text: #1a1a1a;
+  --text-muted: #6b7280;
+  --shadow: 0 2px 8px rgba(0,0,0,0.08);
+  --shadow-lg: 0 4px 16px rgba(0,0,0,0.12);
+  --radius: 10px;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Montserrat', sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
+.container { max-width: 1100px; margin: 0 auto; padding: 20px; }
+
+/* Header */
+.header { background: linear-gradient(135deg, var(--coach-blue) 0%, var(--coach-blue-dark) 100%); color: white; padding: 40px 0; margin-bottom: 30px; border-radius: 0 0 20px 20px; }
+.header .container { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
+.header h1 { font-family: 'Oswald', sans-serif; font-size: 2rem; font-weight: 600; letter-spacing: 1px; }
+.header .subtitle { font-size: 0.95rem; opacity: 0.85; margin-top: 4px; font-weight: 300; }
+.header .scan-date { background: rgba(255,255,255,0.15); padding: 8px 18px; border-radius: 20px; font-size: 0.85rem; font-weight: 500; }
+.brand-mark { font-family: 'Oswald', sans-serif; font-size: 1.1rem; font-weight: 700; letter-spacing: 2px; opacity: 0.9; }
+
+/* Summary Cards */
+.summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 30px; }
+.summary-card { background: var(--card-bg); border-radius: var(--radius); padding: 24px; box-shadow: var(--shadow); text-align: center; border-top: 3px solid var(--coach-blue); }
+.summary-card .num { font-family: 'Oswald', sans-serif; font-size: 2.5rem; font-weight: 700; color: var(--coach-blue); }
+.summary-card .label { font-size: 0.85rem; color: var(--text-muted); font-weight: 500; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+.summary-card.highlight { border-top-color: var(--coach-blue-light); }
+.summary-card.highlight .num { color: var(--coach-blue-light); }
+
+/* Section Headers */
+.section-title { font-family: 'Oswald', sans-serif; font-size: 1.4rem; font-weight: 600; color: var(--coach-blue); margin: 30px 0 16px; padding-bottom: 8px; border-bottom: 2px solid var(--coach-blue); display: flex; align-items: center; gap: 10px; }
+
+/* Company Cards */
+.company-card { background: var(--card-bg); border-radius: var(--radius); box-shadow: var(--shadow); margin-bottom: 16px; overflow: hidden; transition: box-shadow 0.2s; }
+.company-card:hover { box-shadow: var(--shadow-lg); }
+.company-header { padding: 20px 24px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.company-header:hover { background: #fafafa; }
+.company-info { flex: 1; }
+.company-name { font-family: 'Oswald', sans-serif; font-size: 1.15rem; font-weight: 600; color: var(--text); }
+.company-meta { font-size: 0.82rem; color: var(--text-muted); margin-top: 2px; }
+.signal-badge { display: inline-flex; align-items: center; gap: 4px; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+.signal-badge.high { background: #e8f0fe; color: var(--coach-blue); }
+.signal-badge.medium { background: #f0f4f8; color: var(--coach-blue-light); }
+.score-pill { background: var(--coach-blue); color: white; font-family: 'Oswald', sans-serif; font-size: 1.1rem; font-weight: 600; width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.score-pill.medium { background: var(--coach-blue-light); }
+.chevron { font-size: 1.2rem; color: var(--text-muted); transition: transform 0.2s; flex-shrink: 0; }
+.company-card.open .chevron { transform: rotate(180deg); }
+
+/* Expandable Content */
+.company-body { display: none; padding: 0 24px 24px; border-top: 1px solid #eee; }
+.company-card.open .company-body { display: block; }
+.signal-summary { background: #f8fafc; border-left: 3px solid var(--coach-blue); padding: 12px 16px; border-radius: 0 6px 6px 0; margin: 16px 0; font-size: 0.9rem; }
+.signal-summary .signal-type { font-weight: 600; color: var(--coach-blue); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.5px; }
+.signal-summary a { color: var(--coach-blue); text-decoration: none; font-size: 0.8rem; }
+.signal-summary a:hover { text-decoration: underline; }
+.contacts-list { margin: 12px 0; font-size: 0.85rem; color: var(--text-muted); }
+
+/* Draft Content */
+.draft-section { margin: 16px 0; }
+.draft-label { font-family: 'Oswald', sans-serif; font-size: 0.9rem; font-weight: 600; color: var(--coach-blue); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+.draft-box { background: #fafbfc; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; font-size: 0.88rem; line-height: 1.7; position: relative; }
+.draft-box .subject { font-weight: 600; color: var(--coach-blue-dark); margin-bottom: 8px; }
+.copy-btn { position: absolute; top: 8px; right: 8px; background: var(--coach-blue); color: white; border: none; padding: 4px 12px; border-radius: 4px; font-size: 0.72rem; cursor: pointer; font-family: 'Montserrat', sans-serif; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+.copy-btn:hover { background: var(--coach-blue-dark); }
+.copy-btn.copied { background: #22c55e; }
+
+/* No Findings */
+.no-findings { background: var(--card-bg); border-radius: var(--radius); box-shadow: var(--shadow); padding: 24px; }
+.no-findings-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; margin-top: 12px; }
+.nf-item { background: #f8fafc; border-radius: 6px; padding: 12px 16px; font-size: 0.85rem; border-left: 3px solid #d1d5db; }
+.nf-item .nf-name { font-weight: 600; }
+.nf-item .nf-note { color: var(--text-muted); font-size: 0.8rem; margin-top: 4px; }
+
+/* Footer */
+.footer { text-align: center; padding: 30px 0; color: var(--text-muted); font-size: 0.8rem; }
+.footer a { color: var(--coach-blue); text-decoration: none; }
+
+@media (max-width: 768px) {
+  .header h1 { font-size: 1.5rem; }
+  .summary-grid { grid-template-columns: repeat(2, 1fr); }
+  .company-header { flex-wrap: wrap; }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="container">
+    <div>
+      <div class="brand-mark">COACH.WIN</div>
+      <h1>Collision Engine — Weekly Intelligence</h1>
+      <div class="subtitle">Actionable signals for personalized outreach</div>
+    </div>
+    <div class="scan-date">Scan Date: April 27, 2026</div>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- Summary Cards -->
+  <div class="summary-grid">
+    <div class="summary-card"><div class="num">21</div><div class="label">Companies Scanned</div></div>
+    <div class="summary-card highlight"><div class="num">12</div><div class="label">Signals Found</div></div>
+    <div class="summary-card"><div class="num">8</div><div class="label">Score 7+</div></div>
+    <div class="summary-card"><div class="num">11</div><div class="label">No Findings</div></div>
+  </div>
+
+  <!-- Priority Outreach -->
+  <div class="section-title">Priority Outreach — Signals Score 7+</div>
+
+  <!-- 1. Andrew Reise -->
+  <div class="company-card" onclick="this.classList.toggle('open')">
+    <div class="company-header">
+      <div class="company-info">
+        <div class="company-name">Andrew Reise</div>
+        <div class="company-meta">Entresmart · CX Strategy Consultancy · andrewreise.com</div>
+      </div>
+      <span class="signal-badge high">Industry Event</span>
+      <div class="score-pill">9</div>
+      <span class="chevron">▾</span>
+    </div>
+    <div class="company-body">
+      <div class="signal-summary">
+        <div class="signal-type">Industry Event — April 21, 2026</div>
+        Named in Forrester's CX Strategy Consulting Services Landscape Q2 2026 — one of only 28 providers and one of few boutique firms alongside global consultancies. 81 active enterprise clients.
+        <br><a href="https://www.prnewswire.com/news-releases/andrew-reise-named-in-cx-strategy-consulting-services-report-by-independent-research-firm-302748080.html" target="_blank">View Source →</a>
+      </div>
+      <div class="contacts-list"><strong>Contacts:</strong> Andy Mattox, Jeff Lewandowski, Tim Carrigan</div>
+
+      <div class="draft-section">
+        <div class="draft-label">Email Draft</div>
+        <div class="draft-box">
+          <button class="copy-btn" onclick="event.stopPropagation();copyDraft(this)">Copy</button>
+          <div class="subject">Subject: Congrats on the Forrester recognition</div>
+          <p>Hi [First Name],</p>
+          <p>Saw Andrew Reise made Forrester's CX Strategy Consulting Services Landscape — that's a big deal. Being one of 28 providers, and one of the few boutiques holding your own against global firms, says a lot about what you've built.</p>
+          <p>Here's what I've noticed with firms at your stage: 81 enterprise clients as a boutique means you're past the point where the founders can touch every engagement. The systems and leadership bench that got you here probably aren't the ones that get you to 150 clients. That gap is where things get uncomfortable — and where the most interesting work happens.</p>
+          <p>We work with a handful of owner-led firms navigating exactly this kind of inflection. Not consulting — coaching the leadership team to build the operating rhythm that scales without losing what makes you different.</p>
+          <p>Worth a 20-minute conversation? I'd be curious to hear how you're thinking about the next chapter.</p>
+          <p>— Coach</p>
+        </div>
+      </div>
+
+      <div class="draft-section">
+        <div class="draft-label">LinkedIn Message</div>
+        <div class="draft-box">
+          <button class="copy-btn" onclick="event.stopPropagation();copyDraft(this)">Copy</button>
+          <p>Congrats on the Forrester recognition — being a boutique on that list alongside the big firms is no small thing. Curious how you're thinking about scaling the team and operating model to match the demand that kind of visibility creates. We coach a few firms through that exact inflection. Open to swapping notes?</p>
+        </div>
+      </div>
+
+      <div class="draft-section">
+        <div class="draft-label">LinkedIn Post Idea</div>
+        <div class="draft-box">
+          <button class="copy-btn" onclick="event.stopPropagation();copyDraft(this)">Copy</button>
+          <p><strong>Theme:</strong> The dangerous moment when a boutique firm gets recognized alongside the giants</p>
+          <p>There's a moment every growing boutique hits where the industry starts comparing you to firms 10x your size.</p>
+          <p>Feels great. Also feels terrifying.</p>
+          <p>Because the playbook that built your reputation — founders on every engagement, culture by osmosis, decisions over lunch — doesn't survive the next stage of growth.</p>
+          <p>The firms that make it through don't just hire more people. They build an operating rhythm that protects what made them special while creating the structure to scale.</p>
+          <p>The ones that don't? They become a worse version of the big firms they used to beat.</p>
+          <p>If you're a founder staring at this crossroads, the question isn't "should we grow?" It's "what do we refuse to lose?"</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. National Radon Defense -->
+  <div class="company-card" onclick="this.classList.toggle('open')">
+    <div class="company-header">
+      <div class="company-info">
+        <div class="company-name">National Radon Defense</div>
+        <div class="company-meta">Entresmart · Radon Mitigation Network · nationalradondefense.com</div>
+      </div>
+      <span class="signal-badge high">Strategic Move</span>
+      <div class="score-pill">9</div>
+      <span class="chevron">▾</span>
+    </div>
+    <div class="company-body">
+      <div class="signal-summary">
+        <div class="signal-type">Strategic Move — April 1, 2026</div>
+        Announced strategic partnership with FranNet to expand radon & indoor air quality business opportunities nationwide. Pairing FranNet's franchise advisory network with NRD's training, marketing, and operational support.
+        <br><a href="http://www.prnewswire.com/news-releases/national-radon-defense-announces-strategic-partnership-with-frannet-to-expand-radon-industry-access-nationwide-302732171.html" target="_blank">View Source →</a>
+      </div>
+      <div class="contacts-list"><strong>Contacts:</strong> Curt Drew, Anthony Maeser, Samantha Payne, Leif Hansen</div>
+
+      <div class="draft-section">
+        <div class="draft-label">Email Draft</div>
+        <div class="draft-box">
+          <button class="copy-btn" onclick="event.stopPropagation();copyDraft(this)">Copy</button>
+          <div class="subject">Subject: The FranNet move — smart play</div>
+          <p>Hi [First Name],</p>
+          <p>The FranNet partnership caught my eye. Pairing your training and ops platform with their advisory network is a smart way to scale without diluting the quality bar you've set for the radon industry.</p>
+          <p>Here's what I've seen with franchise networks at this stage: the hardest part isn't finding new operators. It's making sure the culture and standards that built your reputation survive when you're onboarding franchisees at 3x the pace. The founders who figure that out early avoid the painful course-corrections later.</p>
+          <p>We coach leadership teams through exactly this kind of scaling — building the quarterly rhythm and accountability systems that keep everyone rowing in the same direction, even as the network grows.</p>
+          <p>Would love to hear how you're thinking about keeping the NRD standard intact through this expansion. Coffee or a quick call?</p>
+          <p>— Coach</p>
+        </div>
+      </div>
+
+      <div class="draft-section">
+        <div class="draft-label">LinkedIn Message</div>
+        <div class="draft-box">
+          <button class="copy-btn" onclick="event.stopPropagation();copyDraft(this)">Copy</button>
+          <p>The FranNet partnership is a sharp move — scaling the network while protecting quality is the real challenge now. We work with franchise leaders navigating exactly that tension. Would be glad to share what's working for the teams we coach. Worth a quick conversation?</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. ToData Analytics -->
+  <div class="company-card" onclick="this.classList.toggle('open')">
+    <div class="company-header">
+      <div class="company-info">
+        <div class="company-name">ToData Analytics</div>
+        <div class="company-meta">Simons.Coach / AI ONE · Clinical Research BI · todata.com</div>
+      </div>
+      <span class="signal-badge high">Strategic Move + Growth</span>
+      <div class="score-pill">8</div>
+      <span class="chevron">▾</span>
+    </div>
+    <div class="company-body">
+      <div class="signal-summary">
+        <div class="signal-type">Strategic Move — January 21, 2026</div>
+        CRIO and Todata formed a strategic partnership — SiteGrades becomes analytics partner in CRIO's Partners Program. Also: Tekton Research selected SiteGrades + Tod AI as enterprise BI solution. AMR Clinical implemented SiteGrades.
+        <br><a href="https://www.prnewswire.com/news-releases/crio-and-todata-partner-to-bring-live-site-performance-intelligence-to-users-302666267.html" target="_blank">View Source →</a>
+      </div>
+      <div class="contacts-list"><strong>Contacts:</strong> Andrew Kimball, Barb Geiger, Ben Titus</div>
+
+      <div class="draft-section">
+        <div class="draft-label">Email Draft</div>
+        <div class="draft-box">
+          <button class="copy-btn" onclick="event.stopPropagation();copyDraft(this)">Copy</button>
+          <div class="subject">Subject: Todata's momentum is hard to miss</div>
+          <p>Hi [First Name],</p>
+          <p>CRIO partnership. Tekton Research. AMR Clinical. Tod AI. That's a lot of wins stacking up fast — and it tells me Todata's hit the product-market fit inflection that most companies only dream about.</p>
+          <p>Here's the honest truth about this stage: the sales momentum is the easy part. The hard part is building the team, the processes, and the operating rhythm to deliver on all those promises without burning out the people who got you here.</p>
+          <p>We coach growing companies through exactly this stretch. Not strategy consulting — hands-on coaching to help the leadership team build the quarterly cadence and accountability systems that turn momentum into durable growth.</p>
+          <p>I'd love to buy you coffee and hear how the team is handling the acceleration. No pitch — just genuinely curious.</p>
+          <p>— Coach</p>
+        </div>
+      </div>
+
+      <div class="draft-section">
+        <div class="draft-label">LinkedIn Message</div>
+        <div class="draft-box">
+          <button class="copy-btn" onclick="event.stopPropagation();copyDraft(this)">Copy</button>
+          <p>The CRIO partnership and Tekton enterprise deal are impressive momentum. The challenge now is making sure the team and processes scale as fast as the pipeline. We coach growing companies through exactly that — would be glad to compare notes over coffee.</p>
+        </div>
+      </div>
+
+      <div class="draft-section">
+        <div class="draft-label">LinkedIn Post Idea</div>
+        <div class="draft-box">
+          <button class="copy-btn" onclick="event.stopPropagation();copyDraft(this)">Copy</button>
+          <p><strong>Theme:</strong> Product-market fit is the beginning, not the finish line</p>
+          <p>Everyone celebrates product-market fit. And they should — it's hard-won.</p>
+          <p>But here's what nobody warns you about: the 18 months after PMF are more dangerous than the 18 months before it.</p>
+          <p>Before PMF, the risk is running out of money. After PMF, the risk is running out of your people.</p>
+          <p>Enterprise deals stacking up. Partnerships accelerating. And the same 12 people who built the product are now trying to sell it, deliver it, support it, and hire for it — all at once.</p>
+          <p>The companies that turn PMF into lasting growth don't just hire faster. They build an operating rhythm that lets the team say yes to the right things and no to everything else.</p>
+          <p>Momentum without structure isn't growth. It's chaos with good PR.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. Arbor Aesthetics -->
+  <div class="company-card" onclick="this.classList.toggle('open')">
+    <div class="company-header">
+      <div class="company-info">
+        <div class="company-name">Arbor Aesthetics</div>
+        <div class="company-meta">Simons.Coach · Tree Service / Arborists · arboraesthetics.com</div>
+      </div>
+      <span class="signal-badge high">Content Activity</span>
+      <div class="score-pill">8</div>
+      <span class="chevron">▾</span>
+    </div>
+    <div class="company-body">
+      <div class="signal-summary">
+        <div class="signal-type">Content Activity — April 21, 2026</div>
+        Featured on WOWT recommending professional tree prep ahead of severe weather. Hosted 2nd annual industry training at Joslyn Castle for crews, other companies, and city arborists. Celebrating 20 years in business. TCIA Accredited — one of only two in Nebraska.
+        <br><a href="https://www.wowt.com/2026/04/21/omaha-arborists-recommend-professional-tree-prep-ahead-severe-weather/" target="_blank">View Source →</a>
+      </div>
+      <div class="contacts-list"><strong>Contacts:</strong> Jeff Grewe, Amy Grewe, Jacob Brown</div>
+
+      <div class="draft-section">
+        <div class="draft-label">Email Draft</div>
+        <div class="draft-box">
+          <button class="copy-btn" onclick="event.stopPropagation();copyDraft(this)">Copy</button>
+          <div class="subject">Subject: 20 years — that's worth celebrating</div>
+          <p>Hi [First Name],</p>
+          <p>Twenty years from a hand saw and a borrowed pickup to hosting industry training at Joslyn Castle and being one of two TCIA-accredited companies in the state. That's a story worth telling.</p>
+          <p>Saw the WOWT feature too — you're not just running a tree service, you're elevating the entire industry in Omaha. The training event for other companies and city arborists says a lot about how you think about this business.</p>
+          <p>Here's what I've noticed with companies at the 20-year mark: you've proven the model works. The question becomes "what's the next chapter?" Some founders double down on growth. Others build the team to run without them. Either way, getting clear on that direction changes everything.</p>
+          <p>We coach owner-led companies through exactly these inflection points. Would love to hear what you're thinking about for the next 20. Coffee's on me.</p>
+          <p>— Coach</p>
+        </div>
+      </div>
+
+      <div class="draft-section">
+        <div class="draft-label">LinkedIn Message</div>
+        <div class="draft-box">
+          <button class="copy-btn" onclick="event.stopPropagation();copyDraft(this)">Copy</button>
+          <p>20 years and still setting the standard — the Joslyn Castle training and WOWT feature are impressive. At this milestone, most owners start thinking about the next chapter. We coach founders through that exact conversation. Would love to hear what's on your mind.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. Informativ -->
+  <div class="company-card" onclick="this.classList.toggle('open')">
+    <div class="company-header">
+      <div class="company-info">
+        <div class="company-name">Informativ</div>
+        <div class="company-meta">Simons.Coach · Auto Fintech · informativ.com</div>
+      </div>
+      <span class="signal-badge high">Leadership + Product</span>
+      <div class="score-pill">7</div>
+      <span class="chevron">▾</span>
+    </div>
+    <div class="company-body">
+      <div class="signal-summary">
+        <div class="signal-type">Leadership Change — January 13, 2026</div>
+        Appointed Dominic Brignola as CFO (former CFO at Hallmark Health Care Solutions, Surgical Notes). PE-backed by Capstreet. Also unveiled SmartPencil + Payments API at NADA 2026 (Jan 27).
+        <br><a href="https://www.globenewswire.com/news-release/2026/01/13/3217640/0/en/Capstreet-backed-Informativ-Names-Dominic-Brignola-as-Chief-Financial-Officer.html" target="_blank">View Source →</a>
+      </div>
+      <div class="contacts-list"><strong>Contacts:</strong> David Carner (CEO), Scott Rosenberg, Christina Wofford</div>
+
+      <div class="draft-section">
+        <div class="draft-label">Email Draft</div>
+        <div class="draft-box">
+          <button class="copy-btn" onclick="event.stopPropagation();copyDraft(this)">Copy</button>
+          <div class="subject">Subject: New CFO + two product launches = a big year ahead</div>
+          <p>Hi [First Name],</p>
+          <p>New CFO, SmartPencil launch, Payments API at NADA — Informativ's moving fast. Bringing on a CFO with Nick's background in PE-backed scaling tells me you're building for the next gear.</p>
+          <p>Here's what I've seen in companies at this stage: the C-suite additions are the signal. The real work is getting the leadership team aligned on where you're going and how you'll get there — especially when the PE clock is ticking and every quarter counts.</p>
+          <p>We coach leadership teams through exactly this kind of scaling sprint. Not strategy slides — actual quarterly game plans with the accountability systems to execute them.</p>
+          <p>Worth a conversation? I'm curious how you're thinking about aligning the team around these moves.</p>
+          <p>— Coach</p>
+        </div>
+      </div>
+
+      <div class="draft-section">
+        <div class="draft-label">LinkedIn Message</div>
+        <div class="draft-box">
+          <button class="copy-btn" onclick="event.stopPropagation();copyDraft(this)">Copy</button>
+          <p>New CFO and two product launches to kick off 2026 — Informativ is clearly in growth mode. We work with PE-backed leadership teams on building the operating rhythm to match the ambition. Open to a quick conversation?</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. EAD Corporate -->
+  <div class="company-card" onclick="this.classList.toggle('open')">
+    <div class="company-header">
+      <div class="company-info">
+        <div class="company-name">EAD Corporate</div>
+        <div class="company-meta">Simons.Coach / AI ONE · Engineering & Construction · eadcorporate.com</div>
+      </div>
+      <span class="signal-badge high">Growth + Restructuring</span>
+      <div class="score-pill">7</div>
+      <span class="chevron">▾</span>
+    </div>
+    <div class="company-body">
+      <div class="signal-summary">
+        <div class="signal-type">Growth Signal — Early 2026</div>
+        Leased 117,000 sq ft manufacturing space in Blaine, MN for data center liquid cooling solutions. Will employ 175+ people once operational. Simultaneously, EAD Constructors filed Chapter 11 (Oct 2025, $10-50M liabilities).
+        <br><a href="https://eadcorporate.com/newsroom/" target="_blank">View Source →</a>
+      </div>
+      <div class="contacts-list"><strong>Contacts:</strong> Stephen Lichter (CEO), Sally White, Brian Klausen</div>
+
+      <div class="draft-section">
+        <div class="draft-label">Email Draft</div>
+        <div class="draft-box">
+          <button class="copy-btn" onclick="event.stopPropagation();copyDraft(this)">Copy</button>
+          <div class="subject">Subject: Data center cooling — big bet, big opportunity</div>
+          <p>Hi [First Name],</p>
+          <p>The Blaine facility for liquid cooling manufacturing is a bold move — and well-timed. Every hyperscaler and colo provider is scrambling for cooling solutions right now.</p>
+          <p>Scaling a new 175-person facility while managing the complexity across the rest of the EAD portfolio takes a leadership team that's extremely clear on priorities. That's the kind of clarity that doesn't happen by accident — it gets built through disciplined quarterly planning and ruthless focus.</p>
+          <p>We coach leadership teams through high-stakes growth phases like this. If you're interested in how other companies have navigated similar expansions, I'd welcome the conversation.</p>
+          <p>— Coach</p>
+        </div>
+      </div>
+
+      <div class="draft-section">
+        <div class="draft-label">LinkedIn Message</div>
+        <div class="draft-box">
+          <button class="copy-btn" onclick="event.stopPropagation();copyDraft(this)">Copy</button>
+          <p>The data center cooling facility in MN is a smart move in a booming market. Scaling a new manufacturing operation while managing a complex portfolio takes serious leadership focus. We coach teams through exactly that. Open to comparing notes?</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Lower Priority Signals -->
+  <div class="section-title">Additional Signals — Score 6</div>
+
+  <!-- Investors Realty -->
+  <div class="company-card" onclick="this.classList.toggle('open')">
+    <div class="company-header">
+      <div class="company-info">
+        <div class="company-name">Investors Realty, Inc.</div>
+        <div class="company-meta">Entresmart · CRE Brokerage · investorsomaha.com</div>
+      </div>
+      <span class="signal-badge medium">Growth Signal</span>
+      <div class="score-pill medium">6</div>
+      <span class="chevron">▾</span>
+    </div>
+    <div class="company-body">
+      <div class="signal-summary">
+        <div class="signal-type">Growth Signal — February 2026</div>
+        Tim Kerrigan arranged $9M sale of Brentwood Square Shopping Center (224,187 sq ft). Firm expects strong 2026 industrial market with speculative construction.
+        <br><a href="https://rejournals.com/investors-realtys-weber-ready-for-an-even-busier-2026-in-omahas-cre-market/" target="_blank">View Source →</a>
+      </div>
+      <div class="contacts-list"><strong>Contacts:</strong> Laura Hansen, Tim Kerrigan, Ryan Zabrowski</div>
+      <div class="draft-section">
+        <div class="draft-label">Email Draft</div>
+        <div class="draft-box">
+          <button class="copy-btn" onclick="event.stopPropagation();copyDraft(this)">Copy</button>
+          <div class="subject">Subject: Busy start to 2026 — the Brentwood deal looks solid</div>
+          <p>Hi [First Name],</p>
+          <p>The Brentwood Square deal and Jeanette's bullish 2026 outlook tell me IRI's hitting its stride. When deal flow is this strong, it's the perfect time to check in on the game plan and make sure the team's energy is pointed at the highest-value opportunities. Happy to grab coffee if you want to talk through what's working and what's next.</p>
+          <p>— Coach</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Restore Hyper Wellness -->
+  <div class="company-card" onclick="this.classList.toggle('open')">
+    <div class="company-header">
+      <div class="company-info">
+        <div class="company-name">Restore Hyper Wellness</div>
+        <div class="company-meta">Entresmart · Wellness Franchise · restore.com</div>
+      </div>
+      <span class="signal-badge medium">Growth Signal</span>
+      <div class="score-pill medium">6</div>
+      <span class="chevron">▾</span>
+    </div>
+    <div class="company-body">
+      <div class="signal-summary">
+        <div class="signal-type">Growth Signal — January 2026</div>
+        #1 in Entrepreneur's Franchise 500. 210+ studios, 1,524 employees. Expanding 20 new locations in PA.
+        <br><a href="https://www.restore.com/press" target="_blank">View Source →</a>
+      </div>
+      <div class="contacts-list"><strong>Contacts:</strong> Kunal Rao, Victor Banda, Angelee Contreras</div>
+      <div class="draft-section">
+        <div class="draft-label">Email Draft</div>
+        <div class="draft-box">
+          <button class="copy-btn" onclick="event.stopPropagation();copyDraft(this)">Copy</button>
+          <div class="subject">Subject: #1 in the Franchise 500 — what comes next?</div>
+          <p>Hi [First Name],</p>
+          <p>Number one in the Franchise 500 is impressive — but what interests me more is what that ranking does to your growth expectations. Every franchisee in your network is feeling the pressure to perform at #1 levels. That's exciting and exhausting in equal measure.</p>
+          <p>We coach franchise operators through the challenge of matching their execution to the brand's ambition. If you're navigating that gap, I'd love to hear how it's going.</p>
+          <p>— Coach</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Holliday Energy Law -->
+  <div class="company-card" onclick="this.classList.toggle('open')">
+    <div class="company-header">
+      <div class="company-info">
+        <div class="company-name">Holliday Energy Law Group</div>
+        <div class="company-meta">Entresmart · Energy Law · theenergylawgroup.com</div>
+      </div>
+      <span class="signal-badge medium">Job Posting</span>
+      <div class="score-pill medium">6</div>
+      <span class="chevron">▾</span>
+    </div>
+    <div class="company-body">
+      <div class="signal-summary">
+        <div class="signal-type">Job Posting — 2026</div>
+        Actively hiring oil & gas attorneys. Firm growing to meet demand. Ben Holliday is Board Certified in Oil, Gas & Mineral Law and Immediate Past President of San Antonio Association of Professional Landmen.
+        <br><a href="https://theenergylawgroup.com/oil-and-gas-attorney-position/" target="_blank">View Source →</a>
+      </div>
+      <div class="contacts-list"><strong>Contacts:</strong> Ben Holliday, Jeremy Horn, Nieve Leonor</div>
+      <div class="draft-section">
+        <div class="draft-label">Email Draft</div>
+        <div class="draft-box">
+          <button class="copy-btn" onclick="event.stopPropagation();copyDraft(this)">Copy</button>
+          <div class="subject">Subject: Growing the team — the fun part and the hard part</div>
+          <p>Hi [First Name],</p>
+          <p>Saw you're hiring oil & gas attorneys — which means deal flow is strong and the team needs to grow to match. That's the good news. The hard part is keeping the quality bar and culture intact when new people are coming in faster than the firm's rhythm can absorb them.</p>
+          <p>We coach owner-led firms through exactly this — building the leadership rhythm and team alignment that lets you grow without losing what makes you special. Happy to share what's working for similar firms if you're interested.</p>
+          <p>— Coach</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Metl-Fab -->
+  <div class="company-card" onclick="this.classList.toggle('open')">
+    <div class="company-header">
+      <div class="company-info">
+        <div class="company-name">Metl-Fab</div>
+        <div class="company-meta">AI ONE · Cold Storage Construction · metl-fab.com</div>
+      </div>
+      <span class="signal-badge medium">Industry Event</span>
+      <div class="score-pill medium">6</div>
+      <span class="chevron">▾</span>
+    </div>
+    <div class="company-body">
+      <div class="signal-summary">
+        <div class="signal-type">Industry Event — 2026</div>
+        Platinum sponsor of 43rd CEBA Conference & Expo. Active projects with new panel installations in Iowa. Next CEBA: Nov 9-11, 2026 in Lost Pines, TX.
+        <br><a href="https://www.gcca.org/events/ceba-conference-expo/" target="_blank">View Source →</a>
+      </div>
+      <div class="contacts-list"><strong>Contacts:</strong> Steve Hoffman</div>
+      <div class="draft-section">
+        <div class="draft-label">Email Draft</div>
+        <div class="draft-box">
+          <button class="copy-btn" onclick="event.stopPropagation();copyDraft(this)">Copy</button>
+          <div class="subject">Subject: Platinum-level investment in CEBA</div>
+          <p>Hi Steve,</p>
+          <p>Platinum sponsor at CEBA says a lot about where Metl-Fab is heading — cold storage construction is booming and you're positioning for the front of it. When the market is this hot, the challenge shifts from finding work to choosing the right work and building the team to deliver it all without dropping balls.</p>
+          <p>We coach growing companies in construction and trades through that exact challenge. Worth a conversation before CEBA?</p>
+          <p>— Coach</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- No Findings Section -->
+  <div class="section-title">No Actionable Signals This Week</div>
+  <div class="no-findings">
+    <p style="font-size:0.9rem;color:var(--text-muted);margin-bottom:12px;">These companies had no significant public signals this week. They remain on the watch list for future scans.</p>
+    <div class="no-findings-grid">
+      <div class="nf-item"><div class="nf-name">DIFFCO</div><div class="nf-note">Steady industrial construction ops in TX/OK/LA</div></div>
+      <div class="nf-item"><div class="nf-name">Caring Solutions SA</div><div class="nf-note">Stable home care provider since 2008</div></div>
+      <div class="nf-item"><div class="nf-name">Eggers Executive Search</div><div class="nf-note">Stable exec search, financial services focus</div></div>
+      <div class="nf-item"><div class="nf-name">Hyde Park Mouldings</div><div class="nf-note">Specialty plaster manufacturer, $8.8M revenue</div></div>
+      <div class="nf-item"><div class="nf-name">NVK Learning</div><div class="nf-note">Limited public footprint — possibly early-stage</div></div>
+      <div class="nf-item"><div class="nf-name">New Street Properties</div><div class="nf-note">Stable RE investment firm since 1992</div></div>
+      <div class="nf-item"><div class="nf-name">Raphael & Raphael</div><div class="nf-note">Established CPA firm since 1941</div></div>
+      <div class="nf-item"><div class="nf-name">Heritage Communities</div><div class="nf-note">Senior living across NE, IA, AZ, TX</div></div>
+      <div class="nf-item"><div class="nf-name">Sower Investment Partners</div><div class="nf-note">Active in farmland, commercial, private credit</div></div>
+      <div class="nf-item"><div class="nf-name">CCE</div><div class="nf-note">Limited public information</div></div>
+      <div class="nf-item"><div class="nf-name">Entresmart</div><div class="nf-note">Internal — not a prospect</div></div>
+    </div>
+  </div>
+
+</div>
+
+<div class="footer">
+  <p><strong>Collision Engine</strong> by <a href="https://coach.win">Coach.Win</a> · Powered by AI · Scan date: April 27, 2026</p>
+  <p style="margin-top:4px;">Live dashboard: <a href="https://collision.coach.win">collision.coach.win</a></p>
+</div>
+
+<script>
+function copyDraft(btn) {
+  event.stopPropagation();
+  const box = btn.parentElement;
+  const text = box.innerText.replace('Copy', '').replace('Copied!', '').trim();
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+  });
+}
+</script>
+</body>
+</html>
