@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Collision Engine — Week of 2026-05-04</title>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Montserrat',sans-serif; background:#f5f5f5; color:#434748; line-height:1.6; }
+.header { background:#16478e; color:white; padding:40px 0 30px; text-align:center; }
+.header h1 { font-family:'Oswald',sans-serif; font-size:2.2rem; letter-spacing:2px; text-transform:uppercase; margin-bottom:4px; }
+.header p { font-size:0.95rem; opacity:0.85; }
+.header .tagline { font-size:1.05rem; opacity:0.7; margin-top:2px; }
+.container { max-width:960px; margin:0 auto; padding:20px; }
+.summary-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin:24px 0; }
+.summary-card { background:white; border-radius:10px; padding:20px; text-align:center; box-shadow:0 2px 8px rgba(0,0,0,0.08); }
+.summary-card .number { font-family:'Oswald',sans-serif; font-size:2.4rem; color:#16478e; }
+.summary-card .label { font-size:0.8rem; text-transform:uppercase; letter-spacing:1px; color:#63666b; margin-top:4px; }
+.section-title { font-family:'Oswald',sans-serif; font-size:1.4rem; text-transform:uppercase; letter-spacing:1.5px; color:#16478e; margin:32px 0 16px; padding-bottom:8px; border-bottom:2px solid #16478e; }
+.company-section { background:white; border-radius:10px; margin-bottom:12px; box-shadow:0 2px 6px rgba(0,0,0,0.06); overflow:hidden; }
+.company-header { padding:16px 20px; cursor:pointer; display:flex; justify-content:space-between; align-items:center; transition:background 0.2s; }
+.company-header:hover { background:#f0f4f8; }
+.company-info { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+.company-info h3 { font-family:'Oswald',sans-serif; font-size:1.15rem; color:#16478e; }
+.sheet-tag { background:#e8eef5; color:#16478e; font-size:0.7rem; padding:3px 8px; border-radius:4px; font-weight:600; text-transform:uppercase; }
+.score-tag { background:#16478e; color:white; font-size:0.7rem; padding:3px 8px; border-radius:4px; font-weight:600; }
+.expand-icon { color:#16478e; font-size:1rem; transition:transform 0.3s; }
+.company-body { padding:0 20px 20px; }
+.company-desc { color:#63666b; font-size:0.9rem; margin-bottom:12px; }
+.contacts, .website { font-size:0.85rem; margin-bottom:6px; }
+.website a { color:#16478e; text-decoration:none; }
+.website a:hover { text-decoration:underline; }
+h4 { font-family:'Oswald',sans-serif; font-size:1rem; text-transform:uppercase; letter-spacing:1px; color:#16478e; margin:16px 0 10px; }
+.signal-card { background:#f8fafc; border-left:4px solid #16478e; border-radius:6px; padding:14px; margin-bottom:10px; }
+.signal-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
+.signal-type { font-weight:600; font-size:0.85rem; color:#16478e; text-transform:uppercase; letter-spacing:0.5px; }
+.badge { font-size:0.75rem; padding:2px 8px; border-radius:10px; font-weight:600; }
+.badge-high { background:#16478e; color:white; }
+.badge-mid { background:#6ba3d6; color:white; }
+.badge-low { background:#c6c6c8; color:#434748; }
+.signal-summary { font-size:0.88rem; margin-bottom:6px; }
+.signal-angle { font-size:0.85rem; color:#63666b; margin-bottom:6px; }
+.source-link { font-size:0.8rem; color:#6ba3d6; text-decoration:none; }
+.source-link:hover { text-decoration:underline; }
+.drafts-section { margin-top:16px; }
+.draft-card { background:#fafbfc; border:1px solid #e2e6ea; border-radius:8px; padding:14px; margin-bottom:10px; position:relative; }
+.draft-label { font-family:'Oswald',sans-serif; font-size:0.8rem; text-transform:uppercase; letter-spacing:1px; color:#16478e; margin-bottom:6px; }
+.draft-subject { font-size:0.88rem; margin-bottom:8px; padding-bottom:8px; border-bottom:1px solid #e2e6ea; }
+.draft-body { font-size:0.85rem; line-height:1.7; color:#434748; white-space:pre-line; }
+.copy-btn { position:absolute; top:12px; right:12px; background:#16478e; color:white; border:none; padding:5px 12px; border-radius:5px; font-size:0.75rem; cursor:pointer; font-family:'Montserrat',sans-serif; }
+.copy-btn:hover { background:#6ba3d6; }
+.no-signals-section { background:white; border-radius:10px; padding:20px; box-shadow:0 2px 6px rgba(0,0,0,0.06); }
+.no-signal-item { padding:10px 0; border-bottom:1px solid #f0f0f0; }
+.no-signal-item:last-child { border-bottom:none; }
+.sheet-tag-sm { background:#e8eef5; color:#16478e; font-size:0.65rem; padding:2px 6px; border-radius:3px; font-weight:600; }
+.note { color:#63666b; font-size:0.82rem; }
+.footer { text-align:center; padding:30px; color:#63666b; font-size:0.8rem; }
+.footer a { color:#16478e; text-decoration:none; }
+@media (max-width:768px) {
+    .summary-grid { grid-template-columns:repeat(2,1fr); }
+    .company-info { flex-direction:column; align-items:flex-start; gap:6px; }
+}
+</style>
+</head>
+<body>
+<div class="header">
+    <h1>Collision Engine</h1>
+    <p>Weekly Intelligence &mdash; Week of May 4, 2026</p>
+    <p class="tagline">Coach.Win &bull; Elevate to Impact</p>
+</div>
+<div class="container">
+    <div class="summary-grid">
+        <div class="summary-card">
+            <div class="number">27</div>
+            <div class="label">Companies Scanned</div>
+        </div>
+        <div class="summary-card">
+            <div class="number">14</div>
+            <div class="label">Signals Found</div>
+        </div>
+        <div class="summary-card">
+            <div class="number">9</div>
+            <div class="label">High-Priority (7+)</div>
+        </div>
+        <div class="summary-card">
+            <div class="number">16</div>
+            <div class="label">No Findings</div>
+        </div>
+    </div>
+
+    <div class="section-title">Priority Outreach</div>
+    
+    <div class="company-section" id="company-0">
+        <div class="company-header" onclick="toggleCompany(0)">
+            <div class="company-info">
+                <h3>National Radon Defense</h3>
+                <span class="sheet-tag">Entresmart</span>
+                <span class="score-tag">Top Score: 9/10</span>
+            </div>
+            <span class="expand-icon" id="icon-0">&#9660;</span>
+        </div>
+        <div class="company-body" id="body-0" style="display:none;">
+            <p class="company-desc">North America's largest professional radon dealership network, supporting independent business owners with training, marketing, and operational support.</p>
+            <p class="contacts"><strong>Contacts:</strong> Curt Drew, Anthony Maeser, Leif Hansen</p>
+            <p class="website"><strong>Website:</strong> <a href="https://nationalradondefense.com" target="_blank">https://nationalradondefense.com</a></p>
+            <h4>SIGNALS</h4>
+            
+        <div class="signal-card">
+            <div class="signal-header">
+                <span class="signal-type">Strategic Move</span>
+                <span class="badge badge-high">9/10</span>
+            </div>
+            <p class="signal-summary">National Radon Defense announced a strategic partnership with FranNet on April 1, 2026 to expand radon and indoor air quality business opportunities nationwide. FranNet's franchise advisory network will connect qualified entrepreneurs with NRD's proven business model.</p>
+            <p class="signal-angle"><strong>Outreach Angle:</strong> NRD is scaling its franchise network nationally — this kind of rapid expansion creates leadership alignment and operational challenges that Coach.Win specializes in. Curt Drew is managing a major growth phase and could benefit from strategic planning support.</p>
+            <a href="http://www.prnewswire.com/news-releases/national-radon-defense-announces-strategic-partnership-with-frannet-to-expand-radon-industry-access-nationwide-302732171.html" target="_blank" class="source-link">View Source &rarr;</a>
+        </div>
+            
+        <div class="drafts-section">
+            <h4>DRAFT OUTREACH</h4>
+            <div class="draft-card">
+                <div class="draft-label">EMAIL</div>
+                <div class="draft-subject"><strong>Subject:</strong> Congrats on the FranNet partnership — scaling a franchise network is no joke</div>
+                <div class="draft-body">Hi [First Name],<br><br>Saw the news about the FranNet partnership — congratulations. Expanding NRD's network through franchise advisory is a smart move, and it's clear you're serious about scaling this thing nationally.<br><br>Here's what we've seen with other owner-led companies hitting this exact inflection point: the business model works, demand is there, but suddenly you've got 10x the leadership complexity. New franchise owners need onboarding. Your core team needs to stay aligned while the org chart doubles. And the founder's time becomes the scarcest resource.<br><br>We work with fast-growing companies (10-200 people) on exactly this — building the strategic planning and accountability frameworks that keep everyone rowing the same direction when growth gets messy.<br><br>Would love to buy you a coffee and hear how you're thinking about the next 12 months. No pitch — genuinely curious how you're structuring the expansion.<br><br>Rob Simons<br>Coach.Win</div>
+                <button class="copy-btn" onclick="copyText(this)">Copy Email</button>
+            </div>
+            <div class="draft-card">
+                <div class="draft-label">LINKEDIN MESSAGE</div>
+                <div class="draft-body">Hey [First Name] — saw the FranNet partnership announcement. Really smart move for scaling NRD nationally. We work with owner-led companies navigating exactly this kind of growth phase — franchise expansion creates a whole new layer of leadership complexity. Would love to hear how you're approaching it. Coffee sometime?</div>
+                <button class="copy-btn" onclick="copyText(this)">Copy Message</button>
+            </div>
+            <div class="draft-card">
+                <div class="draft-label">LINKEDIN POST IDEA</div>
+                <div class="draft-body">Your business model works. Customers love it. You just signed a deal to scale it nationally.<br><br>Now comes the part nobody warns you about.<br><br>The founder becomes a bottleneck. The team that got you here can't get you there without a new operating rhythm. And every new location multiplies complexity, not just revenue.<br><br>I've watched this pattern play out dozens of times with owner-led companies in the 10-200 employee range. The ones who thrive don't just scale the product — they scale the leadership system.<br><br>Three things that separate the ones who make it:<br><br>They build a quarterly game plan that the whole leadership team owns — not just the founder.<br><br>They define &quot;what winning looks like&quot; before they open the next location.<br><br>They create accountability structures that work without the founder in the room.<br><br>Growth isn't the hard part. Scaling the humans is.<br><br>#Leadership #Scaling #BusinessCoaching</div>
+                <button class="copy-btn" onclick="copyText(this)">Copy Post</button>
+            </div></div>
+        </div>
+    </div>
+    <div class="company-section" id="company-1">
+        <div class="company-header" onclick="toggleCompany(1)">
+            <div class="company-info">
+                <h3>Drew Radon Group</h3>
+                <span class="sheet-tag">Entresmart</span>
+                <span class="score-tag">Top Score: 9/10</span>
+            </div>
+            <span class="expand-icon" id="icon-1">&#9660;</span>
+        </div>
+        <div class="company-body" id="body-1" style="display:none;">
+            <p class="company-desc">Related entity to National Radon Defense, part of Curt Drew's radon business portfolio.</p>
+            <p class="contacts"><strong>Contacts:</strong> Curt Drew, Anthony Maeser, Samantha Payne</p>
+            <p class="website"><strong>Website:</strong> <a href="https://nationalradondefense.com" target="_blank">https://nationalradondefense.com</a></p>
+            <h4>SIGNALS</h4>
+            
+        <div class="signal-card">
+            <div class="signal-header">
+                <span class="signal-type">Strategic Move</span>
+                <span class="badge badge-high">9/10</span>
+            </div>
+            <p class="signal-summary">Same FranNet partnership applies — Drew Radon Group is part of the NRD network that is expanding nationally through this franchise advisory partnership.</p>
+            <p class="signal-angle"><strong>Outreach Angle:</strong> Curt Drew is scaling multiple entities simultaneously — Coach.Win can help with leadership team alignment across entities during rapid growth.</p>
+            <a href="http://www.prnewswire.com/news-releases/national-radon-defense-announces-strategic-partnership-with-frannet-to-expand-radon-industry-access-nationwide-302732171.html" target="_blank" class="source-link">View Source &rarr;</a>
+        </div>
+            
+        </div>
+    </div>
+    <div class="company-section" id="company-2">
+        <div class="company-header" onclick="toggleCompany(2)">
+            <div class="company-info">
+                <h3>Andrew Reise</h3>
+                <span class="sheet-tag">Entresmart</span>
+                <span class="score-tag">Top Score: 9/10</span>
+            </div>
+            <span class="expand-icon" id="icon-2">&#9660;</span>
+        </div>
+        <div class="company-body" id="body-2" style="display:none;">
+            <p class="company-desc">Customer experience strategy consultancy with 81 active enterprise clients across financial services, insurance, retail, and government.</p>
+            <p class="contacts"><strong>Contacts:</strong> Andy Mattox, Jeff Lewandowski, Tim Carrigan</p>
+            <p class="website"><strong>Website:</strong> <a href="https://andrewreise.com" target="_blank">https://andrewreise.com</a></p>
+            <h4>SIGNALS</h4>
+            
+        <div class="signal-card">
+            <div class="signal-header">
+                <span class="signal-type">Industry Event</span>
+                <span class="badge badge-high">9/10</span>
+            </div>
+            <p class="signal-summary">Andrew Reise was named in Forrester's 'Customer Experience Strategy Consulting Services Landscape, Q2 2026' report on April 21, 2026 — one of only 28 providers listed, and among a small number of boutique CX consultancies appearing alongside global firms.</p>
+            <p class="signal-angle"><strong>Outreach Angle:</strong> Forrester recognition alongside global firms validates Andrew Reise's growth trajectory. As a boutique firm scaling to compete with big players, Coach.Win's strategic planning and leadership alignment tools are highly relevant.</p>
+            <a href="https://www.prnewswire.com/news-releases/andrew-reise-named-in-cx-strategy-consulting-services-report-by-independent-research-firm-302748080.html" target="_blank" class="source-link">View Source &rarr;</a>
+        </div>
+            
+        <div class="drafts-section">
+            <h4>DRAFT OUTREACH</h4>
+            <div class="draft-card">
+                <div class="draft-label">EMAIL</div>
+                <div class="draft-subject"><strong>Subject:</strong> Forrester recognition — well deserved. What's the next chapter?</div>
+                <div class="draft-body">Hi [First Name],<br><br>Just saw Andrew Reise made Forrester's CX Strategy Consulting Services Landscape report — one of 28 firms listed, and one of the few boutiques alongside the global players. That's a big deal. Congrats.<br><br>Here's the thing about this kind of recognition: it validates what you've already built, but it also creates a new set of problems. More inbound, bigger client expectations, and the pressure to scale without losing what made you special in the first place.<br><br>We've worked with several professional services firms navigating this exact moment — how to grow the team, maintain quality, and keep the partners aligned on where the firm is headed.<br><br>Would love to grab a quick call and hear how you're thinking about 2026 and beyond. Not selling anything — just enjoy connecting with firms doing interesting work.<br><br>Rob Simons<br>Coach.Win</div>
+                <button class="copy-btn" onclick="copyText(this)">Copy Email</button>
+            </div>
+            <div class="draft-card">
+                <div class="draft-label">LINKEDIN MESSAGE</div>
+                <div class="draft-body">Hey [First Name] — congrats on the Forrester recognition. Being listed alongside the big firms as a boutique is no small thing. Curious how you're thinking about scaling from here — we work with professional services firms navigating exactly that growth stage. Coffee?</div>
+                <button class="copy-btn" onclick="copyText(this)">Copy Message</button>
+            </div>
+            <div class="draft-card">
+                <div class="draft-label">LINKEDIN POST IDEA</div>
+                <div class="draft-body">A boutique consulting firm just got named alongside McKinsey and Deloitte in a major analyst report.<br><br>28 firms. They're one of them.<br><br>Here's what happens next (and most people miss this):<br><br>The inbound doubles. The team gets stretched. The founders start asking &quot;how do we grow without becoming what we competed against?&quot;<br><br>This is the defining moment for every professional services firm that breaks through.<br><br>The answer isn't hiring faster. It's building the operating system that lets your team deliver at scale without the founders touching every engagement.<br><br>I've seen boutiques 10x their revenue and lose their soul. I've also seen them 10x and keep it.<br><br>The difference? A clear strategy for what they say no to.<br><br>#ProfessionalServices #Growth #Strategy</div>
+                <button class="copy-btn" onclick="copyText(this)">Copy Post</button>
+            </div></div>
+        </div>
+    </div>
+    <div class="company-section" id="company-3">
+        <div class="company-header" onclick="toggleCompany(3)">
+            <div class="company-info">
+                <h3>ToData Analytics</h3>
+                <span class="sheet-tag">Simons.Coach</span>
+                <span class="score-tag">Top Score: 8/10</span>
+            </div>
+            <span class="expand-icon" id="icon-3">&#9660;</span>
+        </div>
+        <div class="company-body" id="body-3" style="display:none;">
+            <p class="company-desc">Omaha-based business intelligence company helping growing businesses turn complex data into clear decisions. Serves finance, manufacturing, healthcare, and professional services.</p>
+            <p class="contacts"><strong>Contacts:</strong> Andrew Kimball, Barb Geiger, Ben Titus</p>
+            <p class="website"><strong>Website:</strong> <a href="https://todata.com" target="_blank">https://todata.com</a></p>
+            <h4>SIGNALS</h4>
+            
+        <div class="signal-card">
+            <div class="signal-header">
+                <span class="signal-type">Leadership Change</span>
+                <span class="badge badge-high">8/10</span>
+            </div>
+            <p class="signal-summary">Todata appointed Stephanie Anderson as Chief Operating Officer on February 2, 2026. Anderson previously led the complete integration of Meridian Clinical Research at Velocity Clinical Research, overseeing the merging of 70+ locations across four countries.</p>
+            <p class="signal-angle"><strong>Outreach Angle:</strong> New COO hire signals Todata is in a serious growth phase — scaling from 13 employees with a new operational leader. Coach.Win can help align the expanding leadership team and build accountability structures.</p>
+            <a href="https://www.prnewswire.com/news-releases/todata-names-stephanie-anderson-chief-operating-officer-302676140.html" target="_blank" class="source-link">View Source &rarr;</a>
+        </div>
+        <div class="signal-card">
+            <div class="signal-header">
+                <span class="signal-type">Strategic Move</span>
+                <span class="badge badge-mid">7/10</span>
+            </div>
+            <p class="signal-summary">CRIO and Todata formed a strategic partnership on January 21, 2026 to bring live site performance intelligence to clinical research users through SiteGrades.</p>
+            <p class="signal-angle"><strong>Outreach Angle:</strong> Expanding into clinical research verticals with strategic partnerships — Todata is diversifying and growing, creating scaling challenges Coach.Win can address.</p>
+            <a href="https://finance.yahoo.com/news/crio-todata-partner-bring-live-134400798.html" target="_blank" class="source-link">View Source &rarr;</a>
+        </div>
+        <div class="signal-card">
+            <div class="signal-header">
+                <span class="signal-type">Growth Signal</span>
+                <span class="badge badge-mid">6/10</span>
+            </div>
+            <p class="signal-summary">Tekton Research selected Todata's SiteGrades and Tod AI as enterprise BI solution in November 2025, and Tod AI (AI business analyst) launched September 2025.</p>
+            <p class="signal-angle"><strong>Outreach Angle:</strong> Product innovation plus enterprise client wins — Todata is in rapid growth mode with AI products driving adoption.</p>
+            <a href="https://todata.com/todata-launches-tod-ai-business-analyst-answers-questions-in-seconds/" target="_blank" class="source-link">View Source &rarr;</a>
+        </div>
+            
+        <div class="drafts-section">
+            <h4>DRAFT OUTREACH</h4>
+            <div class="draft-card">
+                <div class="draft-label">EMAIL</div>
+                <div class="draft-subject"><strong>Subject:</strong> New COO, new partnerships, Tod AI — Todata's on a run</div>
+                <div class="draft-body">Hi [First Name],<br><br>I've been watching Todata's moves this year — new COO, the CRIO partnership, Tod AI gaining traction, Tekton signing on as enterprise client. That's a lot of momentum in a short window.<br><br>Here's what I've noticed with companies on a run like this: the growth feels amazing, but around employee 15-25, everything that used to &quot;just work&quot; starts breaking. Communication gets harder. The founder can't be in every meeting. And new leaders need time to gel with the existing team.<br><br>We work with owner-led companies in exactly this growth stage — helping leadership teams get aligned on priorities, build quarterly game plans, and create accountability structures that scale with the business.<br><br>No pressure — but I'd enjoy hearing how you're managing the growth. Would a 20-minute call make sense?<br><br>Rob Simons<br>Coach.Win</div>
+                <button class="copy-btn" onclick="copyText(this)">Copy Email</button>
+            </div>
+            <div class="draft-card">
+                <div class="draft-label">LINKEDIN MESSAGE</div>
+                <div class="draft-body">Hey [First Name] — Todata's having quite a year. New COO, CRIO partnership, Tod AI landing enterprise clients. Exciting stuff. We work with fast-growing companies navigating this exact stage — when everything's working but the team dynamics get more complex. Would love to hear how you're thinking about it.</div>
+                <button class="copy-btn" onclick="copyText(this)">Copy Message</button>
+            </div>
+            <div class="draft-card">
+                <div class="draft-label">LINKEDIN POST IDEA</div>
+                <div class="draft-body">Your startup just hired its first COO.<br><br>That means one of two things:<br><br>1. The founder finally admitted they can't do everything.<br>2. The board told them they can't do everything.<br><br>Either way, it's a good sign. But here's what nobody talks about:<br><br>The first 90 days of a COO-founder relationship either builds trust or builds resentment. And it usually comes down to one thing — clarity on who owns what.<br><br>The companies that get this right don't just &quot;figure it out.&quot; They build a decision framework before the new leader starts. They align on quarterly priorities together. And they have the hard conversations early.<br><br>The companies that don't? They lose the COO in 18 months and blame &quot;culture fit.&quot;<br><br>#Leadership #Startups #Scaling</div>
+                <button class="copy-btn" onclick="copyText(this)">Copy Post</button>
+            </div></div>
+        </div>
+    </div>
+    <div class="company-section" id="company-4">
+        <div class="company-header" onclick="toggleCompany(4)">
+            <div class="company-info">
+                <h3>Heritage Communities</h3>
+                <span class="sheet-tag">Simons.Coach</span>
+                <span class="score-tag">Top Score: 8/10</span>
+            </div>
+            <span class="expand-icon" id="icon-4">&#9660;</span>
+        </div>
+        <div class="company-body" id="body-4" style="display:none;">
+            <p class="company-desc">Omaha-based senior living company managing 25 communities across NE, IA, AZ, KS, MO, and TX. Nearly 2,000 associates and residents.</p>
+            <p class="contacts"><strong>Contacts:</strong> Amy Birkel, Farhan Khan, John Pryor</p>
+            <p class="website"><strong>Website:</strong> <a href="https://heritage-communities.com" target="_blank">https://heritage-communities.com</a></p>
+            <h4>SIGNALS</h4>
+            
+        <div class="signal-card">
+            <div class="signal-header">
+                <span class="signal-type">Growth Signal</span>
+                <span class="badge badge-high">8/10</span>
+            </div>
+            <p class="signal-summary">Heritage Communities expanded its portfolio by 33% in February 2026, adding six SageGrove senior living communities across Kansas and Missouri. This is part of their broader third-party management growth strategy.</p>
+            <p class="signal-angle"><strong>Outreach Angle:</strong> 33% portfolio expansion with third-party management contracts creates massive operational complexity. Leadership alignment across 25+ communities needs structured strategic planning — exactly what Coach.Win delivers.</p>
+            <a href="https://www.mcknightsseniorliving.com/news/heritage-communities-expands-senior-living-management-portfolio-by-33-percent/" target="_blank" class="source-link">View Source &rarr;</a>
+        </div>
+        <div class="signal-card">
+            <div class="signal-header">
+                <span class="signal-type">Content Activity</span>
+                <span class="badge badge-high">8/10</span>
+            </div>
+            <p class="signal-summary">CMO Lacy Jungman spoke at the SHN Sales &amp; Marketing Conference in 2026, positioning Heritage as an innovative operator in the senior living space.</p>
+            <p class="signal-angle"><strong>Outreach Angle:</strong> Heritage is actively thought-leading in the industry. Their rapid growth and public presence makes them a great case for Coach.Win's quarterly game plan approach.</p>
+            <a href="https://seniorhousingnews.com/2026/04/30/how-the-senior-living-industry-can-compete-against-margaritas-and-disney-magic/" target="_blank" class="source-link">View Source &rarr;</a>
+        </div>
+            
+        <div class="drafts-section">
+            <h4>DRAFT OUTREACH</h4>
+            <div class="draft-card">
+                <div class="draft-label">EMAIL</div>
+                <div class="draft-subject"><strong>Subject:</strong> 33% portfolio growth in one quarter — how's the team holding up?</div>
+                <div class="draft-body">Hi [First Name],<br><br>Congrats on the SageGrove communities addition — six new communities in KS and MO, expanding the portfolio by 33%. That's aggressive growth, and it speaks to Heritage's reputation in the industry.<br><br>Here's the honest question though: when you go from 19 to 25 communities, does the leadership team's capacity grow by 33% too? Usually not. And that's where things get interesting.<br><br>We work with owner-led companies managing rapid expansion — helping leadership teams build the operating rhythm and accountability structures that keep quality consistent across locations. When you're managing nearly 2,000 associates across six states, strategic alignment isn't a nice-to-have. It's survival.<br><br>Would love to hear how you're structuring the integration. Coffee or a quick call — your pick.<br><br>Rob Simons<br>Coach.Win</div>
+                <button class="copy-btn" onclick="copyText(this)">Copy Email</button>
+            </div>
+            <div class="draft-card">
+                <div class="draft-label">LINKEDIN MESSAGE</div>
+                <div class="draft-body">Hey [First Name] — saw Heritage added six SageGrove communities, growing the portfolio 33%. Impressive. Curious how you're keeping the leadership team aligned across 25+ communities and six states — we work with companies navigating exactly that kind of scaling challenge. Would love to connect.</div>
+                <button class="copy-btn" onclick="copyText(this)">Copy Message</button>
+            </div>
+            <div class="draft-card">
+                <div class="draft-label">LINKEDIN POST IDEA</div>
+                <div class="draft-body">You just grew your company by 33% in one quarter.<br><br>Your revenue went up. Your headcount went up. Your complexity went up.<br><br>But did your leadership system grow by 33% too?<br><br>This is the gap that kills fast-growing multi-location businesses. The math doesn't add up — more locations, same leadership team, same meeting cadence, same decision-making process.<br><br>The companies that scale successfully do three things differently:<br><br>They upgrade their operating rhythm every time they cross a complexity threshold.<br><br>They define what &quot;winning&quot; looks like at each location — not just company-wide.<br><br>They build accountability that doesn't depend on the CEO being present.<br><br>Growth is easy. Scaling the leadership system is the real work.<br><br>#MultiLocation #Leadership #Scaling</div>
+                <button class="copy-btn" onclick="copyText(this)">Copy Post</button>
+            </div></div>
+        </div>
+    </div>
+    <div class="company-section" id="company-5">
+        <div class="company-header" onclick="toggleCompany(5)">
+            <div class="company-info">
+                <h3>Restore Hyper Wellness</h3>
+                <span class="sheet-tag">Entresmart</span>
+                <span class="score-tag">Top Score: 7/10</span>
+            </div>
+            <span class="expand-icon" id="icon-5">&#9660;</span>
+        </div>
+        <div class="company-body" id="body-5" style="display:none;">
+            <p class="company-desc">Leading hyper wellness franchise with 100+ locations nationwide. Kunal Rao is a multi-unit franchisee with locations in LA and Boston areas.</p>
+            <p class="contacts"><strong>Contacts:</strong> Kunal Rao, Victor Banda, Angelee Contreras</p>
+            <p class="website"><strong>Website:</strong> <a href="https://restore.com" target="_blank">https://restore.com</a></p>
+            <h4>SIGNALS</h4>
+            
+        <div class="signal-card">
+            <div class="signal-header">
+                <span class="signal-type">Growth Signal</span>
+                <span class="badge badge-mid">7/10</span>
+            </div>
+            <p class="signal-summary">Restore ranked #1 in Miscellaneous Personal-Care Businesses in 2026. The franchise network grew to 1,524 employees as of January 2026. Kunal Rao has committed to 20 locations across LA and Boston.</p>
+            <p class="signal-angle"><strong>Outreach Angle:</strong> Kunal Rao is managing multi-unit franchise expansion across two major metro areas — the operational and leadership complexity of scaling 20 locations is exactly where Coach.Win adds value.</p>
+            <a href="https://www.entrepreneur.com/franchises/directory/restore-hyper-wellness/335630" target="_blank" class="source-link">View Source &rarr;</a>
+        </div>
+            
+        <div class="drafts-section">
+            <h4>DRAFT OUTREACH</h4>
+            <div class="draft-card">
+                <div class="draft-label">EMAIL</div>
+                <div class="draft-subject"><strong>Subject:</strong> 20 locations across two metros — how are you keeping it all connected?</div>
+                <div class="draft-body">Hi [First Name],<br><br>Saw Restore is ranked #1 in the category again this year, and that you're committed to 20 locations across LA and Boston. That's serious franchise ambition — and managing across two major metros is a different animal than clustering in one market.<br><br>The multi-unit franchise owners we work with all hit the same wall: each location works individually, but the owner can't be everywhere. The challenge shifts from &quot;can we run a great location?&quot; to &quot;can we build a system that runs great locations without me?&quot;<br><br>We help business owners build exactly that — quarterly game plans, leadership accountability, and a scalable operating rhythm. Would love to hear how you're thinking about the next phase. Quick call?<br><br>Rob Simons<br>Coach.Win</div>
+                <button class="copy-btn" onclick="copyText(this)">Copy Email</button>
+            </div>
+            <div class="draft-card">
+                <div class="draft-label">LINKEDIN MESSAGE</div>
+                <div class="draft-body">Hey [First Name] — congrats on the continued Restore expansion. Managing 20 locations across LA and Boston is no small feat. We work with multi-unit operators on building the leadership systems that scale. Would love to connect and hear how you're approaching it.</div>
+                <button class="copy-btn" onclick="copyText(this)">Copy Message</button>
+            </div></div>
+        </div>
+    </div>
+    <div class="company-section" id="company-6">
+        <div class="company-header" onclick="toggleCompany(6)">
+            <div class="company-info">
+                <h3>Eggers Executive Search</h3>
+                <span class="sheet-tag">Entresmart</span>
+                <span class="score-tag">Top Score: 7/10</span>
+            </div>
+            <span class="expand-icon" id="icon-6">&#9660;</span>
+        </div>
+        <div class="company-body" id="body-6" style="display:none;">
+            <p class="company-desc">National executive search firm specializing in Financial Services. Based in Omaha, $4M revenue, 15 employees.</p>
+            <p class="contacts"><strong>Contacts:</strong> Jason Eggers, Aaron Rider, Adrian Rider</p>
+            <p class="website"><strong>Website:</strong> <a href="https://eggersesearch.com" target="_blank">https://eggersesearch.com</a></p>
+            <h4>SIGNALS</h4>
+            
+        <div class="signal-card">
+            <div class="signal-header">
+                <span class="signal-type">Job Posting</span>
+                <span class="badge badge-mid">7/10</span>
+            </div>
+            <p class="signal-summary">Hiring Executive Recruiter in Omaha and TM Sales Officer in Dallas-Fort Worth, indicating geographic expansion and team growth.</p>
+            <p class="signal-angle"><strong>Outreach Angle:</strong> Expanding from Omaha to Dallas-Fort Worth shows growth ambition. A 15-person firm adding across geographies benefits from Coach.Win's team alignment and scaling playbooks.</p>
+            <a href="https://www.linkedin.com/company/eggers-executive-search" target="_blank" class="source-link">View Source &rarr;</a>
+        </div>
+            
+        <div class="drafts-section">
+            <h4>DRAFT OUTREACH</h4>
+            <div class="draft-card">
+                <div class="draft-label">EMAIL</div>
+                <div class="draft-subject"><strong>Subject:</strong> Expanding from Omaha to DFW — the multi-city challenge</div>
+                <div class="draft-body">Hi [First Name],<br><br>Noticed you're hiring in both Omaha and Dallas-Fort Worth — looks like Eggers is expanding its footprint. That's exciting.<br><br>Here's what we've seen with professional services firms going multi-city: the first new market feels like a great idea until you realize the culture, communication, and accountability systems that worked in one office don't automatically transfer to two.<br><br>We work with growing firms on building the strategic frameworks that keep teams aligned across geographies. Would love to grab coffee and hear how you're thinking about the expansion.<br><br>Rob Simons<br>Coach.Win</div>
+                <button class="copy-btn" onclick="copyText(this)">Copy Email</button>
+            </div>
+            <div class="draft-card">
+                <div class="draft-label">LINKEDIN MESSAGE</div>
+                <div class="draft-body">Hey [First Name] — saw Eggers is expanding from Omaha to DFW. Smart move into a big market. We work with professional services firms navigating multi-city growth — curious how you're keeping the team aligned across geographies. Coffee?</div>
+                <button class="copy-btn" onclick="copyText(this)">Copy Message</button>
+            </div></div>
+        </div>
+    </div>
+    <div class="company-section" id="company-7">
+        <div class="company-header" onclick="toggleCompany(7)">
+            <div class="company-info">
+                <h3>Arbor Aesthetics</h3>
+                <span class="sheet-tag">Simons.Coach</span>
+                <span class="score-tag">Top Score: 6/10</span>
+            </div>
+            <span class="expand-icon" id="icon-7">&#9660;</span>
+        </div>
+        <div class="company-body" id="body-7" style="display:none;">
+            <p class="company-desc">Certified arborist tree care company in Omaha, one of only two TCIA-accredited firms in Nebraska. Founded 2005 by Jeff and Amy Grewe.</p>
+            <p class="contacts"><strong>Contacts:</strong> Jeff Grewe, Amy Grewe, Jacob Brown</p>
+            <p class="website"><strong>Website:</strong> <a href="https://arboraesthetics.com" target="_blank">https://arboraesthetics.com</a></p>
+            <h4>SIGNALS</h4>
+            
+        <div class="signal-card">
+            <div class="signal-header">
+                <span class="signal-type">Content Activity</span>
+                <span class="badge badge-mid">6/10</span>
+            </div>
+            <p class="signal-summary">Celebrating 20 years of business in Omaha. Rolled out new brand promise 'Beautiful trees for life' replacing previous tagline, signaling strategic brand evolution.</p>
+            <p class="signal-angle"><strong>Outreach Angle:</strong> 20-year milestone often triggers reflection on what's next — growth, succession planning, or scaling. Good time for Coach.Win to discuss the next chapter.</p>
+            <a href="https://arboraesthetics.com/category/our-company/" target="_blank" class="source-link">View Source &rarr;</a>
+        </div>
+            
+        <div class="drafts-section">
+            <h4>DRAFT OUTREACH</h4>
+            <div class="draft-card">
+                <div class="draft-label">EMAIL</div>
+                <div class="draft-subject"><strong>Subject:</strong> 20 years of Arbor Aesthetics — what's the next chapter?</div>
+                <div class="draft-body">Hi [First Name],<br><br>Twenty years of Arbor Aesthetics — congrats. Building a company that lasts two decades and becomes one of only two TCIA-accredited firms in Nebraska is no accident.<br><br>I've found that milestone moments like this are when owners start asking the bigger questions: &quot;Where do we go from here? Do we want to grow? Sell? Double down?&quot; And often the team around them hasn't had those conversations yet.<br><br>We work with owner-led companies at exactly these inflection points — helping leadership teams define what winning looks like for the next chapter. Would love to hear what's on your mind. Coffee?<br><br>Rob Simons<br>Coach.Win</div>
+                <button class="copy-btn" onclick="copyText(this)">Copy Email</button>
+            </div>
+            <div class="draft-card">
+                <div class="draft-label">LINKEDIN MESSAGE</div>
+                <div class="draft-body">Hey [First Name] — congrats on 20 years of Arbor Aesthetics. That's a serious milestone. We work with owner-led companies navigating &quot;what's next&quot; after big milestones like this. Would love to hear what you're thinking about for the next chapter.</div>
+                <button class="copy-btn" onclick="copyText(this)">Copy Message</button>
+            </div></div>
+        </div>
+    </div>
+    <div class="company-section" id="company-8">
+        <div class="company-header" onclick="toggleCompany(8)">
+            <div class="company-info">
+                <h3>EAD Corporate</h3>
+                <span class="sheet-tag">Simons.Coach</span>
+                <span class="score-tag">Top Score: 6/10</span>
+            </div>
+            <span class="expand-icon" id="icon-8">&#9660;</span>
+        </div>
+        <div class="company-body" id="body-8" style="display:none;">
+            <p class="company-desc">International engineering, automation, and design firm. 346 employees across 5 continents. HQ in Omaha.</p>
+            <p class="contacts"><strong>Contacts:</strong> Stephen Lichter, Sally White, Brian Klausen</p>
+            <p class="website"><strong>Website:</strong> <a href="https://eadcorporate.com" target="_blank">https://eadcorporate.com</a></p>
+            <h4>SIGNALS</h4>
+            
+        <div class="signal-card">
+            <div class="signal-header">
+                <span class="signal-type">Growth Signal</span>
+                <span class="badge badge-mid">6/10</span>
+            </div>
+            <p class="signal-summary">EAD has grown to 346 employees across 5 continents as of February 2026, with offices in North America, Europe, and South America.</p>
+            <p class="signal-angle"><strong>Outreach Angle:</strong> Managing 346 employees globally creates leadership and alignment challenges. Coach.Win's quarterly game plans can help maintain focus across continents.</p>
+            <a href="https://www.zoominfo.com/c/ead-corporate/347879171" target="_blank" class="source-link">View Source &rarr;</a>
+        </div>
+            
+        <div class="drafts-section">
+            <h4>DRAFT OUTREACH</h4>
+            <div class="draft-card">
+                <div class="draft-label">EMAIL</div>
+                <div class="draft-subject"><strong>Subject:</strong> 346 employees across 5 continents — keeping alignment at that scale</div>
+                <div class="draft-body">Hi [First Name],<br><br>EAD's growth to 346 employees across five continents is impressive — engineering and automation services at that global scale is complex work.<br><br>Here's what we've seen with companies that cross the 300-employee mark: the leadership challenges shift fundamentally. It's no longer about hiring fast enough — it's about keeping the leadership team aligned on priorities when you've got offices in different time zones and different cultures.<br><br>We work with growing companies on building strategic alignment and quarterly planning systems that work at scale. Would love to hear how you're managing it. Quick call?<br><br>Rob Simons<br>Coach.Win</div>
+                <button class="copy-btn" onclick="copyText(this)">Copy Email</button>
+            </div>
+            <div class="draft-card">
+                <div class="draft-label">LINKEDIN MESSAGE</div>
+                <div class="draft-body">Hey [First Name] — 346 employees across 5 continents at EAD is impressive. Curious how you keep the leadership team aligned across that many time zones and cultures. We help growing companies build those operating systems. Would love to connect.</div>
+                <button class="copy-btn" onclick="copyText(this)">Copy Message</button>
+            </div></div>
+        </div>
+    </div>
+    <div class="company-section" id="company-9">
+        <div class="company-header" onclick="toggleCompany(9)">
+            <div class="company-info">
+                <h3>Investors Realty, Inc.</h3>
+                <span class="sheet-tag">Entresmart</span>
+                <span class="score-tag">Top Score: 5/10</span>
+            </div>
+            <span class="expand-icon" id="icon-9">&#9660;</span>
+        </div>
+        <div class="company-body" id="body-9" style="display:none;">
+            <p class="company-desc">Omaha's leading commercial real estate brokerage, managing 6M+ sq ft and brokering over $2.45B in deals.</p>
+            <p class="contacts"><strong>Contacts:</strong> Laura Hansen, Tim Kerrigan, Ryan Zabrowski</p>
+            <p class="website"><strong>Website:</strong> <a href="https://investorsomaha.com" target="_blank">https://investorsomaha.com</a></p>
+            <h4>SIGNALS</h4>
+            
+        <div class="signal-card">
+            <div class="signal-header">
+                <span class="signal-type">Content Activity</span>
+                <span class="badge badge-low">5/10</span>
+            </div>
+            <p class="signal-summary">Featured in REJournals article about 2026 Omaha CRE outlook. Weber expects an even busier 2026 with strong industrial market, soccer stadium groundbreaking, and Mutual of Omaha tower development driving activity.</p>
+            <p class="signal-angle"><strong>Outreach Angle:</strong> Busy market year ahead means scaling challenges for the team. Good time to discuss strategic planning for capitalizing on market opportunities.</p>
+            <a href="https://rejournals.com/investors-realtys-weber-ready-for-an-even-busier-2026-in-omahas-cre-market/" target="_blank" class="source-link">View Source &rarr;</a>
+        </div>
+            
+        <div class="drafts-section">
+            <h4>DRAFT OUTREACH</h4>
+            <div class="draft-card">
+                <div class="draft-label">EMAIL</div>
+                <div class="draft-subject"><strong>Subject:</strong> Busy 2026 ahead for Omaha CRE — ready for it?</div>
+                <div class="draft-body">Hi [First Name],<br><br>Saw the REJournals piece about 2026 being even busier for Omaha's CRE market — soccer stadium, Mutual of Omaha tower, strong industrial pipeline. Exciting times.<br><br>When the market's running hot, the challenge for a brokerage like Investors Realty is making sure the team can capitalize without burning out. We work with professional services firms on building quarterly game plans that keep everyone focused on the highest-value opportunities.<br><br>Would love to connect over coffee and hear how you're thinking about 2026.<br><br>Rob Simons<br>Coach.Win</div>
+                <button class="copy-btn" onclick="copyText(this)">Copy Email</button>
+            </div>
+            <div class="draft-card">
+                <div class="draft-label">LINKEDIN MESSAGE</div>
+                <div class="draft-body">Hey [First Name] — looks like 2026 is shaping up to be a big year for Omaha CRE. Curious how you're prioritizing across all the activity. Would love to connect and hear your take.</div>
+                <button class="copy-btn" onclick="copyText(this)">Copy Message</button>
+            </div></div>
+        </div>
+    </div>
+    <div class="company-section" id="company-10">
+        <div class="company-header" onclick="toggleCompany(10)">
+            <div class="company-info">
+                <h3>Holliday Energy Law Group</h3>
+                <span class="sheet-tag">Entresmart</span>
+                <span class="score-tag">Top Score: 5/10</span>
+            </div>
+            <span class="expand-icon" id="icon-10">&#9660;</span>
+        </div>
+        <div class="company-body" id="body-10" style="display:none;">
+            <p class="company-desc">Energy law firm in San Antonio and Midland focused solely on oil and gas. Founded 2010.</p>
+            <p class="contacts"><strong>Contacts:</strong> Ben Holliday, Jeremy Horn, Nieve Leonor</p>
+            <p class="website"><strong>Website:</strong> <a href="https://theenergylawgroup.com" target="_blank">https://theenergylawgroup.com</a></p>
+            <h4>SIGNALS</h4>
+            
+        <div class="signal-card">
+            <div class="signal-header">
+                <span class="signal-type">Job Posting</span>
+                <span class="badge badge-low">5/10</span>
+            </div>
+            <p class="signal-summary">Hiring for Oil and Gas Attorney positions, indicating growing team to handle increased workload.</p>
+            <p class="signal-angle"><strong>Outreach Angle:</strong> Growing legal team suggests increasing deal flow. Firm growth may benefit from structured strategic planning.</p>
+            <a href="https://theenergylawgroup.com/oil-and-gas-attorney-position/" target="_blank" class="source-link">View Source &rarr;</a>
+        </div>
+            
+        <div class="drafts-section">
+            <h4>DRAFT OUTREACH</h4>
+            <div class="draft-card">
+                <div class="draft-label">EMAIL</div>
+                <div class="draft-subject"><strong>Subject:</strong> Growing the team in energy law — an exciting time</div>
+                <div class="draft-body">Hi [First Name],<br><br>Noticed Holliday Energy is hiring — sounds like deal flow is keeping you busy. That's a great problem to have.<br><br>Here's what we've seen with growing law firms: adding attorneys solves the capacity problem, but it creates a new one — keeping the team aligned on the firm's direction, quality standards, and client experience as you scale.<br><br>We work with professional services firms on building the strategic frameworks that grow with the team. Would love to grab a call and hear how things are going. No pitch — just enjoy connecting with firms doing interesting work.<br><br>Rob Simons<br>Coach.Win</div>
+                <button class="copy-btn" onclick="copyText(this)">Copy Email</button>
+            </div>
+            <div class="draft-card">
+                <div class="draft-label">LINKEDIN MESSAGE</div>
+                <div class="draft-body">Hey [First Name] — saw Holliday Energy is expanding the team. That's exciting. We work with growing professional services firms on keeping teams aligned during scaling. Would love to connect.</div>
+                <button class="copy-btn" onclick="copyText(this)">Copy Message</button>
+            </div></div>
+        </div>
+    </div>
+
+    <div class="section-title">No Findings This Week</div>
+    <div class="no-signals-section">
+        <div class="no-signal-item"><strong>New Street Properties</strong> <span class="sheet-tag-sm">Entresmart</span><br><span class="note">No actionable signals found this week. Limited public presence.</span></div><div class="no-signal-item"><strong>NVK Learning</strong> <span class="sheet-tag-sm">Entresmart</span><br><span class="note">No actionable signals found this week. No recent public activity.</span></div><div class="no-signal-item"><strong>Hyde Park Mouldings, Inc.</strong> <span class="sheet-tag-sm">Entresmart</span><br><span class="note">No actionable signals found this week. Company appears stable with no recent public activity.</span></div><div class="no-signal-item"><strong>informativ</strong> <span class="sheet-tag-sm">Simons.Coach</span><br><span class="note">No actionable signals found this week. Limited public presence.</span></div><div class="no-signal-item"><strong>DIFFCO</strong> <span class="sheet-tag-sm">Simons.Coach</span><br><span class="note">No actionable signals found this week. Revenue data ($20.8M) available but no new public announcements.</span></div><div class="no-signal-item"><strong>Sower Services</strong> <span class="sheet-tag-sm">Simons.Coach</span><br><span class="note">No actionable signals found this week. Company website recently updated but no public press releases in 2026.</span></div><div class="no-signal-item"><strong>Sower Private Credit</strong> <span class="sheet-tag-sm">Simons.Coach</span><br><span class="note">No actionable signals found this week. Sower has ongoing multifamily construction projects but no new public announcements.</span></div><div class="no-signal-item"><strong>Caring Solutions San Antonio</strong> <span class="sheet-tag-sm">Simons.Coach</span><br><span class="note">No actionable signals found this week. Company appears stable with no recent public activity.</span></div><div class="no-signal-item"><strong>Raphael & Raphael</strong> <span class="sheet-tag-sm">Simons.Coach</span><br><span class="note">No actionable signals found this week. Company appears stable. ZoomInfo mentions recent hiring but no specifics.</span></div><div class="no-signal-item"><strong>Entresmart</strong> <span class="sheet-tag-sm">AI ONE</span><br><span class="note">Internal Coach.Win partner. No external signals to report.</span></div><div class="no-signal-item"><strong>EAD</strong> <span class="sheet-tag-sm">AI ONE</span><br><span class="note">See EAD Corporate entry under Simons.Coach for signals.</span></div><div class="no-signal-item"><strong>CCE</strong> <span class="sheet-tag-sm">AI ONE</span><br><span class="note">No actionable signals found this week. Limited public presence.</span></div><div class="no-signal-item"><strong>Todata</strong> <span class="sheet-tag-sm">AI ONE</span><br><span class="note">See ToData Analytics entry under Simons.Coach for signals (COO hire, CRIO partnership, Tod AI).</span></div><div class="no-signal-item"><strong>Heritage</strong> <span class="sheet-tag-sm">AI ONE</span><br><span class="note">See Heritage Communities entry under Simons.Coach for signals (33% portfolio expansion, conference speaking).</span></div><div class="no-signal-item"><strong>Sower</strong> <span class="sheet-tag-sm">AI ONE</span><br><span class="note">See Sower entries under Simons.Coach.</span></div><div class="no-signal-item"><strong>Metl-Fab</strong> <span class="sheet-tag-sm">AI ONE</span><br><span class="note">No actionable signals found this week. Recently celebrated 20 years and launched new website, but no major 2026 announcements.</span></div>
+    </div>
+</div>
+<div class="footer">
+    <p>Collision Engine by <a href="https://coach.win" target="_blank">Coach.Win</a> &bull; Powered by AI &bull; Generated 2026-05-04</p>
+</div>
+<script>
+function toggleCompany(i) {
+    var body = document.getElementById('body-' + i);
+    var icon = document.getElementById('icon-' + i);
+    if (body.style.display === 'none') {
+        body.style.display = 'block';
+        icon.innerHTML = '&#9650;';
+    } else {
+        body.style.display = 'none';
+        icon.innerHTML = '&#9660;';
+    }
+}
+function copyText(btn) {
+    var card = btn.parentElement;
+    var body = card.querySelector('.draft-body');
+    var subject = card.querySelector('.draft-subject');
+    var text = '';
+    if (subject) text += subject.innerText + '\n\n';
+    text += body.innerText;
+    navigator.clipboard.writeText(text).then(function() {
+        btn.textContent = 'Copied!';
+        setTimeout(function() { btn.textContent = btn.textContent.replace('Copied!', 'Copy'); }, 2000);
+    });
+}
+</script>
+</body>
+</html>
