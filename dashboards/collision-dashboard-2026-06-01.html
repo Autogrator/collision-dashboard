@@ -1,0 +1,1076 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Collision Engine — June 1, 2026</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Montserrat', 'Avenir Next', 'Segoe UI', sans-serif;
+    background: #f0f2f5;
+    color: #434748;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  .header {
+    background: #16478e;
+    background-image: url('https://files.simons.coach/coachwin/brand/assets/backgrounds/Topographic_Map_Blue.png');
+    background-size: cover;
+    background-position: center;
+    color: white;
+    padding: 28px 40px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .header-left { display: flex; align-items: center; gap: 18px; }
+  .header-logo { height: 44px; object-fit: contain; }
+  .header-title h1 {
+    font-family: 'Oswald', 'Arial Narrow', sans-serif;
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: white;
+    line-height: 1.1;
+  }
+  .header-title p { font-size: 12px; color: rgba(255,255,255,0.75); margin-top: 3px; letter-spacing: 1px; }
+  .header-right { text-align: right; }
+  .scan-date { font-size: 12px; color: rgba(255,255,255,0.8); letter-spacing: 1px; }
+  .scan-date strong { color: white; font-size: 15px; display: block; margin-top: 2px; }
+
+  .summary-bar {
+    background: white;
+    border-bottom: 2px solid #e8eaed;
+    padding: 16px 40px;
+    display: flex;
+    gap: 24px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .stat-card {
+    background: #f5f7fa;
+    border-left: 4px solid #16478e;
+    padding: 10px 18px;
+    border-radius: 4px;
+    min-width: 120px;
+  }
+  .stat-card .num {
+    font-family: 'Oswald', sans-serif;
+    font-size: 28px;
+    font-weight: 700;
+    color: #16478e;
+    line-height: 1;
+  }
+  .stat-card .label { font-size: 11px; color: #63666b; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 3px; }
+  .stat-card.red { border-left-color: #bd2b36; }
+  .stat-card.red .num { color: #bd2b36; }
+  .stat-card.light { border-left-color: #6ba3d6; }
+  .stat-card.light .num { color: #6ba3d6; }
+  .stat-card.gray { border-left-color: #c6c6c8; }
+  .stat-card.gray .num { color: #63666b; }
+
+  .main { max-width: 1200px; margin: 0 auto; padding: 28px 32px 48px; }
+
+  .section-heading {
+    font-family: 'Oswald', 'Arial Narrow', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: white;
+    background: #16478e;
+    padding: 8px 16px;
+    margin-bottom: 16px;
+    border-radius: 3px;
+  }
+  .section-heading.red { background: #bd2b36; }
+  .section-heading.gray { background: #63666b; }
+
+  /* Company cards */
+  .company-card {
+    background: white;
+    border-radius: 6px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    margin-bottom: 20px;
+    overflow: hidden;
+    border: 1px solid #e4e8ef;
+  }
+  .company-card-header {
+    padding: 16px 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: white;
+    transition: background 0.15s;
+    user-select: none;
+  }
+  .company-card-header:hover { background: #f8f9fb; }
+  .score-badge {
+    background: #16478e;
+    color: white;
+    font-family: 'Oswald', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    width: 44px;
+    height: 44px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .score-badge.score-9 { background: #16478e; }
+  .score-badge.score-8 { background: #6ba3d6; }
+  .score-badge.score-7 { background: #63666b; }
+  .score-badge.score-5 { background: #c6c6c8; color: #434748; }
+  .company-meta { flex: 1; }
+  .company-name {
+    font-family: 'Oswald', sans-serif;
+    font-size: 16px;
+    font-weight: 600;
+    color: #16478e;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .company-meta-row {
+    display: flex;
+    gap: 12px;
+    margin-top: 4px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    padding: 2px 8px;
+    border-radius: 2px;
+    text-transform: uppercase;
+  }
+  .tag.signal { background: #e8f0fb; color: #16478e; }
+  .tag.sheet { background: #f0f0f0; color: #63666b; }
+  .tag.date { background: #fff7e0; color: #9a6a00; }
+  .toggle-btn {
+    background: none;
+    border: 1px solid #dde2eb;
+    color: #16478e;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    padding: 6px 12px;
+    border-radius: 3px;
+    cursor: pointer;
+    text-transform: uppercase;
+    flex-shrink: 0;
+    transition: all 0.15s;
+  }
+  .toggle-btn:hover { background: #16478e; color: white; border-color: #16478e; }
+
+  .company-card-body {
+    display: none;
+    border-top: 1px solid #e8eaed;
+  }
+  .company-card-body.open { display: block; }
+
+  .content-tabs {
+    display: flex;
+    border-bottom: 1px solid #e8eaed;
+    background: #f5f7fa;
+  }
+  .tab-btn {
+    padding: 10px 18px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #63666b;
+    border-bottom: 3px solid transparent;
+    transition: all 0.15s;
+  }
+  .tab-btn.active { color: #16478e; border-bottom-color: #16478e; background: white; }
+  .tab-btn:hover:not(.active) { color: #16478e; background: #edf1f8; }
+
+  .tab-content { display: none; padding: 20px 24px; }
+  .tab-content.active { display: block; }
+
+  .signal-box {
+    background: #f0f5fc;
+    border-left: 4px solid #16478e;
+    padding: 12px 16px;
+    border-radius: 3px;
+    margin-bottom: 16px;
+    font-size: 13px;
+    line-height: 1.6;
+  }
+  .signal-box strong { color: #16478e; }
+
+  .draft-block {
+    margin-bottom: 24px;
+  }
+  .draft-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: #63666b;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .copy-btn {
+    background: #16478e;
+    color: white;
+    border: none;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    padding: 3px 10px;
+    border-radius: 2px;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: background 0.15s;
+  }
+  .copy-btn:hover { background: #0f3369; }
+  .copy-btn.copied { background: #46b449; }
+  .draft-text {
+    background: white;
+    border: 1px solid #dde2eb;
+    border-radius: 4px;
+    padding: 14px 16px;
+    font-size: 13px;
+    line-height: 1.7;
+    color: #434748;
+    white-space: pre-wrap;
+    font-family: 'Montserrat', sans-serif;
+  }
+  .subject-line {
+    background: #f0f5fc;
+    border: 1px solid #c5d5ee;
+    border-radius: 3px;
+    padding: 8px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #16478e;
+    margin-bottom: 8px;
+  }
+  .subject-line span { color: #63666b; font-weight: 400; }
+
+  .contacts-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+  }
+  .contact-chip {
+    background: #f0f5fc;
+    border: 1px solid #c5d5ee;
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-size: 11px;
+    color: #16478e;
+  }
+  .contact-chip a { color: #16478e; text-decoration: none; }
+  .contact-chip a:hover { text-decoration: underline; }
+
+  .angle-box {
+    background: #fffbe6;
+    border-left: 4px solid #f3d115;
+    padding: 10px 14px;
+    border-radius: 3px;
+    font-size: 12px;
+    line-height: 1.6;
+    color: #5a4d00;
+    margin-bottom: 14px;
+  }
+  .angle-box strong { color: #5a4d00; }
+
+  /* No findings */
+  .no-findings-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 10px;
+  }
+  .no-finding-chip {
+    background: white;
+    border: 1px solid #e4e8ef;
+    border-radius: 4px;
+    padding: 10px 14px;
+  }
+  .no-finding-chip .name {
+    font-weight: 600;
+    font-size: 12px;
+    color: #434748;
+  }
+  .no-finding-chip .sheet-tag {
+    font-size: 10px;
+    color: #63666b;
+    margin-top: 2px;
+  }
+  .no-finding-chip .note {
+    font-size: 11px;
+    color: #63666b;
+    margin-top: 5px;
+    line-height: 1.4;
+  }
+
+  /* EAD warning */
+  .hold-card {
+    background: white;
+    border: 1px solid #f0c0c3;
+    border-left: 4px solid #bd2b36;
+    border-radius: 4px;
+    padding: 14px 18px;
+    margin-bottom: 16px;
+  }
+  .hold-card .company { font-weight: 700; color: #bd2b36; font-size: 14px; }
+  .hold-card .note { font-size: 12px; color: #434748; margin-top: 4px; line-height: 1.5; }
+
+  .footer {
+    background: #434748;
+    background-image: url('https://files.simons.coach/coachwin/brand/assets/backgrounds/Topographic_Map_Grey.png');
+    background-size: cover;
+    color: rgba(255,255,255,0.6);
+    text-align: center;
+    padding: 18px 32px;
+    font-size: 11px;
+    letter-spacing: 0.5px;
+    margin-top: 40px;
+  }
+  .footer img { height: 28px; object-fit: contain; margin-bottom: 8px; display: block; margin-left: auto; margin-right: auto; }
+  .footer a { color: rgba(255,255,255,0.7); text-decoration: none; }
+  .footer a:hover { color: white; }
+
+  @media (max-width: 700px) {
+    .header { flex-direction: column; align-items: flex-start; gap: 12px; padding: 20px 20px 18px; }
+    .main { padding: 20px 16px 40px; }
+    .summary-bar { padding: 14px 20px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-left">
+    <img class="header-logo" src="https://files.simons.coach/coachwin/brand/assets/logos/logo-reverse-white-blue.png" alt="Coach.Win">
+    <div class="header-title">
+      <h1>Collision Engine</h1>
+      <p>WEEKLY INTELLIGENCE REPORT</p>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="scan-date">SCAN DATE<strong>June 1, 2026</strong></div>
+  </div>
+</div>
+
+<!-- SUMMARY BAR -->
+<div class="summary-bar">
+  <div class="stat-card">
+    <div class="num">27</div>
+    <div class="label">Companies Scanned</div>
+  </div>
+  <div class="stat-card">
+    <div class="num">9</div>
+    <div class="label">Signals Found</div>
+  </div>
+  <div class="stat-card light">
+    <div class="num">5</div>
+    <div class="label">Priority Outreach</div>
+  </div>
+  <div class="stat-card gray">
+    <div class="num">14</div>
+    <div class="label">No Findings</div>
+  </div>
+  <div class="stat-card red">
+    <div class="num">1</div>
+    <div class="label">Hold (Review First)</div>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- PRIORITY OUTREACH SECTION -->
+  <div class="section-heading">🎯 Priority Outreach — Send This Week</div>
+
+  <!-- 1. NATIONAL RADON DEFENSE -->
+  <div class="company-card">
+    <div class="company-card-header" onclick="toggleCard(this)">
+      <div class="score-badge score-9">9</div>
+      <div class="company-meta">
+        <div class="company-name">National Radon Defense</div>
+        <div class="company-meta-row">
+          <span class="tag signal">Strategic Move</span>
+          <span class="tag sheet">Entresmart</span>
+          <span class="tag date">Apr 1, 2026</span>
+        </div>
+        <div style="font-size:12px; color:#63666b; margin-top:5px;">FranNet partnership announced — franchise network expansion nationwide</div>
+      </div>
+      <button class="toggle-btn">View Drafts ▾</button>
+    </div>
+    <div class="company-card-body">
+      <div class="content-tabs">
+        <button class="tab-btn active" onclick="switchTab(this,'nrd-signal')">Signal</button>
+        <button class="tab-btn" onclick="switchTab(this,'nrd-email')">Email</button>
+        <button class="tab-btn" onclick="switchTab(this,'nrd-li-msg')">LinkedIn DM</button>
+        <button class="tab-btn" onclick="switchTab(this,'nrd-li-post')">LinkedIn Post</button>
+      </div>
+      <div id="nrd-signal" class="tab-content active">
+        <div class="signal-box">
+          <strong>What happened:</strong> National Radon Defense announced a strategic partnership with FranNet on April 1, 2026 to recruit and onboard new franchise owners nationwide. NRD is North America's largest radon dealership network — this partnership opens the door to a significant expansion of independent franchise operators across the US.
+        </div>
+        <div class="angle-box">
+          <strong>Outreach angle:</strong> Franchise network expansion is a classic scaling inflection point. Managing a growing number of independent owners requires leadership alignment, a consistent culture playbook, and operational systems that don't depend on the founder being everywhere at once. That's Coach.Win's sweet spot. Reach out to Curt Drew.
+        </div>
+        <div class="contacts-row">
+          <span class="contact-chip">Curt Drew &lt;curt@nationalradondefense.com&gt;</span>
+          <span class="contact-chip">Anthony Maeser &lt;anthony@nationalradondefense.com&gt;</span>
+          <span class="contact-chip">Leif Hansen &lt;leif@nationalradondefense.com&gt;</span>
+        </div>
+      </div>
+      <div id="nrd-email" class="tab-content">
+        <div class="subject-line"><span>Subject: </span>The FranNet partnership — what comes next</div>
+        <div class="draft-block">
+          <div class="draft-label">Email Body <button class="copy-btn" onclick="copyText(this,'nrd-email-body')">Copy</button></div>
+          <div class="draft-text" id="nrd-email-body">Hi [First Name],
+
+Saw the announcement about the FranNet partnership — that's a meaningful move. Growing the NRD dealer network is clearly the play, and bringing in a franchise advisory network to recruit owners is the right infrastructure for it.
+
+Here's what we typically see at this stage: the first wave of new franchisees goes fine. The hard part shows up around month 6-9 when you're onboarding people who didn't come up through the business. Keeping the culture consistent, the standards clear, and the operating playbook tight — without Curt being the one who holds it all together — that's the real challenge.
+
+We work with owner-led companies who are building the systems to scale without becoming a different company in the process. It's not complicated, but it's hard work.
+
+If any of this sounds familiar, I'd love to grab 30 minutes. Happy to share what we've seen work — no agenda, just a real conversation.
+
+— [Rob / John]
+Coach.Win | elevate@coach.win</div>
+        </div>
+      </div>
+      <div id="nrd-li-msg" class="tab-content">
+        <div class="draft-block">
+          <div class="draft-label">LinkedIn Message <button class="copy-btn" onclick="copyText(this,'nrd-li-msg-body')">Copy</button></div>
+          <div class="draft-text" id="nrd-li-msg-body">Hey [First Name] — saw the FranNet news. Big move for NRD.
+
+Franchise network expansion is exciting and complicated at the same time. The part that usually sneaks up on founders: keeping culture and standards consistent as new owners come in who didn't live through the early days.
+
+We work with owner-led businesses navigating exactly that phase. Happy to share what we've seen work — 20-minute call, no pitch. Worth it?</div>
+        </div>
+      </div>
+      <div id="nrd-li-post" class="tab-content">
+        <div class="draft-block">
+          <div class="draft-label">LinkedIn Post Idea <button class="copy-btn" onclick="copyText(this,'nrd-post-body')">Copy</button></div>
+          <div class="draft-text" id="nrd-post-body">Franchise expansion is mostly a leadership problem dressed up as an operations problem.
+
+You can build the systems. You can write the playbook. But here's what actually derails growing franchise networks: new owners who didn't live through the founding years don't carry the culture in their bones the way the original team does.
+
+They follow the manual. They don't know why it was written.
+
+In our experience working with owner-led businesses at this transition point, the companies that scale well aren't the ones with the best operations manual. They're the ones where the founder has done the hard work of making the culture explicit — before the expansion, not during it.
+
+What you make implicit stays with you. What you make explicit can be taught.
+
+The window to do that work is right now, before the first wave of new franchisees. Not after.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. INFORMATIV -->
+  <div class="company-card">
+    <div class="company-card-header" onclick="toggleCard(this)">
+      <div class="score-badge score-9">9</div>
+      <div class="company-meta">
+        <div class="company-name">informativ</div>
+        <div class="company-meta-row">
+          <span class="tag signal">Leadership Change + Growth</span>
+          <span class="tag sheet">Simons.Coach</span>
+          <span class="tag date">Jan–Apr 2026</span>
+        </div>
+        <div style="font-size:12px; color:#63666b; margin-top:5px;">New CFO hired + CUDL partnership + Inc. Regionals recognition — all Q1</div>
+      </div>
+      <button class="toggle-btn">View Drafts ▾</button>
+    </div>
+    <div class="company-card-body">
+      <div class="content-tabs">
+        <button class="tab-btn active" onclick="switchTab(this,'inf-signal')">Signal</button>
+        <button class="tab-btn" onclick="switchTab(this,'inf-email')">Email</button>
+        <button class="tab-btn" onclick="switchTab(this,'inf-li-msg')">LinkedIn DM</button>
+        <button class="tab-btn" onclick="switchTab(this,'inf-li-post')">LinkedIn Post</button>
+      </div>
+      <div id="inf-signal" class="tab-content active">
+        <div class="signal-box">
+          <strong>What happened:</strong> Three signals hit in the same quarter: (1) Nick Brignola joined as CFO on Jan 27, 2026; (2) CUDL strategic partnership announced Jan 13 to streamline workflows and reduce risk; (3) Named to Inc. Regionals: Southwest list in April 2026. Product launches (SmartPencil, Payments API) at NADA 2026.
+        </div>
+        <div class="angle-box">
+          <strong>Outreach angle:</strong> New CFO + Inc. recognition + strategic partnership in one quarter = a company accelerating hard. Adding a CFO signals they're building financial infrastructure to scale. This is the exact moment leadership alignment matters most — when everyone on the team has a different definition of "fast enough." Reach out to David Carner.
+        </div>
+        <div class="contacts-row">
+          <span class="contact-chip">David Carner &lt;david@informativ.com&gt;</span>
+          <span class="contact-chip">Scott Rosenberg &lt;scott@informativ.com&gt;</span>
+          <span class="contact-chip">Christina Wofford &lt;christina@informativ.com&gt;</span>
+        </div>
+      </div>
+      <div id="inf-email" class="tab-content">
+        <div class="subject-line"><span>Subject: </span>Inc. Regionals + new CFO — what's next?</div>
+        <div class="draft-block">
+          <div class="draft-label">Email Body <button class="copy-btn" onclick="copyText(this,'inf-email-body')">Copy</button></div>
+          <div class="draft-text" id="inf-email-body">Hi [First Name],
+
+The Inc. Regionals recognition is well earned. And bringing on Nick as CFO on top of the CUDL partnership — you've had a busy quarter.
+
+Here's what I've noticed working with companies at this stage: the moment you add an executive layer is also the moment alignment gets complicated. Everyone's moving fast. The CEO's priorities and the CFO's priorities aren't always the same thing — even when everyone agrees on the direction.
+
+The companies that navigate this well are the ones who build a shared operating cadence early. Not just OKRs on a slide deck — an actual rhythm where the leadership team reviews, adjusts, and stays locked together on the quarterly plan.
+
+I'd love to share what we've seen work. 30-minute call, no pitch — just an honest conversation about what's working and what's getting harder.
+
+— [Rob / John]
+Coach.Win | elevate@coach.win</div>
+        </div>
+      </div>
+      <div id="inf-li-msg" class="tab-content">
+        <div class="draft-block">
+          <div class="draft-label">LinkedIn Message <button class="copy-btn" onclick="copyText(this,'inf-li-msg-body')">Copy</button></div>
+          <div class="draft-text" id="inf-li-msg-body">Hey [First Name] — congrats on the Inc. Regionals nod. That's earned, not given.
+
+New CFO, CUDL partnership, product launches all in one quarter — you're clearly in a sprint. The thing that usually gets hard right around here is leadership alignment. When everyone's moving fast, "fast enough" starts meaning different things to different people.
+
+We help founder-led teams build the operating cadence that keeps the leadership layer locked together through growth. Happy to share what we've seen work — worth a 20-minute conversation?</div>
+        </div>
+      </div>
+      <div id="inf-li-post" class="tab-content">
+        <div class="draft-block">
+          <div class="draft-label">LinkedIn Post Idea <button class="copy-btn" onclick="copyText(this,'inf-post-body')">Copy</button></div>
+          <div class="draft-text" id="inf-post-body">Adding a CFO is one of the best decisions a fast-growing founder can make.
+
+It's also when leadership alignment problems that were invisible become very visible, very fast.
+
+Here's what we see in companies at this stage: the CEO is wired for growth and possibility. The new CFO is wired for financial control and risk. Both are right. And they're looking at the same company and seeing completely different things.
+
+In our experience working with owner-led businesses who've just expanded their leadership team — the friction isn't about the decisions themselves. It's about operating at different speeds without a shared cadence to synchronize on.
+
+The fix isn't more meetings. It's the right meeting, with the right rhythm, focused on the right things.
+
+The leadership team that reviews together, stays aligned together. That's not a platitude. It's just what actually works.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. HERITAGE COMMUNITIES -->
+  <div class="company-card">
+    <div class="company-card-header" onclick="toggleCard(this)">
+      <div class="score-badge score-9">9</div>
+      <div class="company-meta">
+        <div class="company-name">Heritage Communities</div>
+        <div class="company-meta-row">
+          <span class="tag signal">Growth Signal</span>
+          <span class="tag sheet">Simons.Coach</span>
+          <span class="tag date">Feb–Mar 2026</span>
+        </div>
+        <div style="font-size:12px; color:#63666b; margin-top:5px;">33% portfolio expansion — 6 new communities in Kansas & Missouri, new SageGrove brand</div>
+      </div>
+      <button class="toggle-btn">View Drafts ▾</button>
+    </div>
+    <div class="company-card-body">
+      <div class="content-tabs">
+        <button class="tab-btn active" onclick="switchTab(this,'her-signal')">Signal</button>
+        <button class="tab-btn" onclick="switchTab(this,'her-email')">Email</button>
+        <button class="tab-btn" onclick="switchTab(this,'her-li-msg')">LinkedIn DM</button>
+        <button class="tab-btn" onclick="switchTab(this,'her-li-post')">LinkedIn Post</button>
+      </div>
+      <div id="her-signal" class="tab-content active">
+        <div class="signal-box">
+          <strong>What happened:</strong> Heritage Communities expanded its managed senior living portfolio by 33%, adding 6 communities in Kansas and Missouri from Principal Senior Living Group. The new locations were rebranded as "SageGrove." Missouri locations came online Feb 9, Kansas on Mar 18. Heritage now manages 25 total locations across 6 states.
+        </div>
+        <div class="angle-box">
+          <strong>Outreach angle:</strong> A 33% expansion + new brand launch + entry into 2 new states in 90 days is a massive organizational lift. The team that built a 19-location company now has to lead a 25-location company — with 6 of those communities coming in under a new brand, with unfamiliar teams, in unfamiliar markets. That gap is exactly where Coach.Win works.
+        </div>
+        <div class="contacts-row">
+          <span class="contact-chip">Amy Birkel &lt;abirkel@heritage-communities.com&gt;</span>
+          <span class="contact-chip">Farhan Khan &lt;fkhan@heritage-communities.com&gt;</span>
+          <span class="contact-chip">John Pryor &lt;jpryor@heritage-communities.com&gt;</span>
+          <span class="contact-chip">Debbie Petru &lt;dpetru@heritage-communities.com&gt;</span>
+        </div>
+      </div>
+      <div id="her-email" class="tab-content">
+        <div class="subject-line"><span>Subject: </span>25 communities — how's the integration going?</div>
+        <div class="draft-block">
+          <div class="draft-label">Email Body <button class="copy-btn" onclick="copyText(this,'her-email-body')">Copy</button></div>
+          <div class="draft-text" id="her-email-body">Hi [First Name],
+
+The SageGrove launch and the Kansas/Missouri expansion are impressive — that's a meaningful move in a short window.
+
+Here's the thing about 33% growth in 90 days: the operations can absorb it. The leadership team is usually the constraint. Not because anyone's doing anything wrong — but because the culture, the standards, and the "how we do things here" that made Heritage what it is at 19 communities don't automatically transfer to 25.
+
+The teams at those 6 new locations are watching carefully. They're deciding whether this is a company they want to be part of for the long haul, or just the latest management change.
+
+We work with owner-led companies who are going through exactly this — building the playbook that scales culture alongside headcount. I'd love to share what we've seen work at companies similar to Heritage.
+
+30 minutes, your calendar. No pitch.
+
+— [Rob / John]
+Coach.Win | elevate@coach.win</div>
+        </div>
+      </div>
+      <div id="her-li-msg" class="tab-content">
+        <div class="draft-block">
+          <div class="draft-label">LinkedIn Message <button class="copy-btn" onclick="copyText(this,'her-li-msg-body')">Copy</button></div>
+          <div class="draft-text" id="her-li-msg-body">Hey [First Name] — the SageGrove expansion was hard to miss. Six communities, two new states, 90 days. That's a lot of organizational change all at once.
+
+The part that usually gets complicated isn't the operations — it's keeping culture intact when new teams are watching to see what kind of company Heritage actually is.
+
+We help owner-led businesses build the leadership playbook for exactly this kind of growth. Happy to share what's worked — worth 20 minutes?</div>
+        </div>
+      </div>
+      <div id="her-li-post" class="tab-content">
+        <div class="draft-block">
+          <div class="draft-label">LinkedIn Post Idea <button class="copy-btn" onclick="copyText(this,'her-post-body')">Copy</button></div>
+          <div class="draft-text" id="her-post-body">The hardest part of acquiring a business isn't the deal. It's the 90 days after.
+
+Most integration plans are written by people who've never had to explain the culture of their company to someone who didn't help build it.
+
+Here's what we see in the companies that get integration right: they treat it like an onboarding problem, not an operations problem. The question isn't "how do we standardize processes across the new sites?" It's "how do we help these new teams understand what we actually believe and why — so they can make good decisions on their own?"
+
+The culture of a company isn't in its systems. It's in the judgment calls people make when no one's watching.
+
+That only transfers one way: on purpose, with intention, over time.
+
+If you're in the middle of a fast expansion right now — the window to get this right is the first 90 days. Not month 7.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. TODATA ANALYTICS -->
+  <div class="company-card">
+    <div class="company-card-header" onclick="toggleCard(this)">
+      <div class="score-badge score-8">8</div>
+      <div class="company-meta">
+        <div class="company-name">ToData Analytics</div>
+        <div class="company-meta-row">
+          <span class="tag signal">Leadership Change</span>
+          <span class="tag sheet">Simons.Coach</span>
+          <span class="tag date">Feb 2, 2026</span>
+        </div>
+        <div style="font-size:12px; color:#63666b; margin-top:5px;">New COO Stephanie Anderson appointed — founder transitioning to CEO role</div>
+      </div>
+      <button class="toggle-btn">View Drafts ▾</button>
+    </div>
+    <div class="company-card-body">
+      <div class="content-tabs">
+        <button class="tab-btn active" onclick="switchTab(this,'tod-signal')">Signal</button>
+        <button class="tab-btn" onclick="switchTab(this,'tod-email')">Email</button>
+        <button class="tab-btn" onclick="switchTab(this,'tod-li-msg')">LinkedIn DM</button>
+        <button class="tab-btn" onclick="switchTab(this,'tod-li-post')">LinkedIn Post</button>
+      </div>
+      <div id="tod-signal" class="tab-content active">
+        <div class="signal-box">
+          <strong>What happened:</strong> Todata Analytics appointed Stephanie Anderson as COO on February 2, 2026. Anderson brings scaling experience from Spreetail (high-growth ecommerce) and clinical research/healthcare. This is the first executive hire at the COO level for the Omaha-based analytics firm.
+        </div>
+        <div class="angle-box">
+          <strong>Outreach angle:</strong> Hiring a COO is the clearest signal a founder is moving from operator to CEO. Andrew Kimball is building an executive team for the first time. That transition — knowing when to let go, what to delegate, how to lead leaders instead of doing the work — is the hardest thing founders navigate. It's also Coach.Win's exact domain.
+        </div>
+        <div class="contacts-row">
+          <span class="contact-chip">Andrew Kimball &lt;akimball@todata.com&gt;</span>
+          <span class="contact-chip">Barb Geiger &lt;bgeiger@todata.com&gt;</span>
+          <span class="contact-chip">Ben Titus &lt;btitus@todata.com&gt;</span>
+        </div>
+      </div>
+      <div id="tod-email" class="tab-content">
+        <div class="subject-line"><span>Subject: </span>The COO hire — congrats. What's the transition been like?</div>
+        <div class="draft-block">
+          <div class="draft-label">Email Body <button class="copy-btn" onclick="copyText(this,'tod-email-body')">Copy</button></div>
+          <div class="draft-text" id="tod-email-body">Hi Andrew,
+
+Congrats on bringing Stephanie on board. Hiring a COO is one of those moves that looks straightforward on paper and turns out to be one of the more complex things a founder navigates in practice.
+
+Here's what I've seen in companies at this stage: the biggest challenge isn't whether Stephanie is the right person. It's building the operating rhythm that actually lets you function as a two-leader team — clear lanes, shared priorities, and a cadence that keeps you aligned without you having to be in every conversation.
+
+Most founders figure this out the hard way over 18 months. The ones who do it well usually have a framework going in.
+
+I work with owner-led companies on exactly this kind of transition — helping the founding CEO and their executive team build a shared operating model that scales with the business. Happy to share what's worked. 30 minutes, your call.
+
+— [Rob / John]
+Coach.Win | elevate@coach.win</div>
+        </div>
+      </div>
+      <div id="tod-li-msg" class="tab-content">
+        <div class="draft-block">
+          <div class="draft-label">LinkedIn Message <button class="copy-btn" onclick="copyText(this,'tod-li-msg-body')">Copy</button></div>
+          <div class="draft-text" id="tod-li-msg-body">Hey Andrew — congrats on the COO hire. Big milestone.
+
+Hiring your first COO is when the transition from founder-operator to CEO actually starts. It's also when the operating model that got you here starts showing its cracks.
+
+We help founders navigate exactly this — building a two-leader team with clear lanes, shared priorities, and a rhythm that doesn't require you to be the connective tissue for everything.
+
+Worth 20 minutes to share what we've seen work?</div>
+        </div>
+      </div>
+      <div id="tod-li-post" class="tab-content">
+        <div class="draft-block">
+          <div class="draft-label">LinkedIn Post Idea <button class="copy-btn" onclick="copyText(this,'tod-post-body')">Copy</button></div>
+          <div class="draft-text" id="tod-post-body">The decision to hire a COO is often the right one. The transition to actually being a CEO is the hard part.
+
+Most founders who hire a COO do it because they're overwhelmed. That's a good reason. But the problem they think they're solving — "I need more capacity" — isn't always the real problem.
+
+The real problem is usually this: the company's operating model was built around one person knowing everything, being involved in everything, and holding the culture together through sheer presence.
+
+That model doesn't survive a COO hire. It has to be rebuilt.
+
+In our experience working with founder-led companies at this stage, the ones who get it right spend the first 90 days working on one thing: making implicit operating norms explicit — so the COO can run the business, not just interpret the founder.
+
+Clear > Assumed. Documented > Remembered. Always.
+
+If you've hired a COO in the last six months and you're figuring out "how we actually work together" — that's normal. And there's a better way to navigate it than trial and error.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. ANDREW REISE -->
+  <div class="company-card">
+    <div class="company-card-header" onclick="toggleCard(this)">
+      <div class="score-badge score-8">8</div>
+      <div class="company-meta">
+        <div class="company-name">Andrew Reise</div>
+        <div class="company-meta-row">
+          <span class="tag signal">Industry Recognition</span>
+          <span class="tag sheet">Entresmart</span>
+          <span class="tag date">Apr 21, 2026</span>
+        </div>
+        <div style="font-size:12px; color:#63666b; margin-top:5px;">Named in Forrester Q2 2026 CX Strategy Consulting Services Landscape</div>
+      </div>
+      <button class="toggle-btn">View Drafts ▾</button>
+    </div>
+    <div class="company-card-body">
+      <div class="content-tabs">
+        <button class="tab-btn active" onclick="switchTab(this,'ar-signal')">Signal</button>
+        <button class="tab-btn" onclick="switchTab(this,'ar-email')">Email</button>
+        <button class="tab-btn" onclick="switchTab(this,'ar-li-msg')">LinkedIn DM</button>
+        <button class="tab-btn" onclick="switchTab(this,'ar-li-post')">LinkedIn Post</button>
+      </div>
+      <div id="ar-signal" class="tab-content active">
+        <div class="signal-box">
+          <strong>What happened:</strong> Andrew Reise was named in Forrester Research's Q2 2026 CX Strategy Consulting Services Landscape report (published April 21, 2026), alongside 27 other providers. Recognition highlights AI-accelerated research, VoC analysis, AI adoption and enablement, and SOC2 Type II compliance. The firm has 81 active enterprise clients across financial services, insurance, retail, and government.
+        </div>
+        <div class="angle-box">
+          <strong>Outreach angle:</strong> Forrester recognition is a growth accelerator and a stress test at the same time. Inbound from enterprise buyers will increase. So will scrutiny. Scaling a consulting firm at this moment requires a tight leadership operating model — one that can deliver consistently across 81 clients while onboarding new ones. That's Coach.Win's domain.
+        </div>
+        <div class="contacts-row">
+          <span class="contact-chip">Andy Mattox &lt;amattox@andrewreise.com&gt;</span>
+          <span class="contact-chip">Jeff Lewandowski &lt;jlewandowski@andrewreise.com&gt;</span>
+          <span class="contact-chip">Tim Carrigan &lt;tcarrigan@andrewreise.com&gt;</span>
+        </div>
+      </div>
+      <div id="ar-email" class="tab-content">
+        <div class="subject-line"><span>Subject: </span>The Forrester report — what it unlocks (and what it demands)</div>
+        <div class="draft-block">
+          <div class="draft-label">Email Body <button class="copy-btn" onclick="copyText(this,'ar-email-body')">Copy</button></div>
+          <div class="draft-text" id="ar-email-body">Hi Andy,
+
+The Forrester recognition is real validation — they don't hand those out. And it puts Andrew Reise in a different conversation with enterprise buyers.
+
+Here's what usually happens next: the inbound gets better. The deals get bigger. And the delivery model that worked at 81 clients starts showing its seams at 95 or 110 — not because anything broke, but because the operating rhythm wasn't designed for that scale.
+
+The firms that handle this well aren't the ones who hire faster. They're the ones who build a quarterly operating cadence that aligns the leadership team on priorities before the growth arrives, not after it's already compressing the team.
+
+I work with consulting firms and professional services businesses on exactly this. Happy to share what the pattern looks like and what works. 30 minutes, your calendar.
+
+— [Rob / John]
+Coach.Win | elevate@coach.win</div>
+        </div>
+      </div>
+      <div id="ar-li-msg" class="tab-content">
+        <div class="draft-block">
+          <div class="draft-label">LinkedIn Message <button class="copy-btn" onclick="copyText(this,'ar-li-msg-body')">Copy</button></div>
+          <div class="draft-text" id="ar-li-msg-body">Hey Andy — the Forrester report listing was well deserved. That opens real doors at the enterprise level.
+
+The part that usually follows: the delivery model that got you to 81 clients starts showing its seams when you're onboarding 10 new ones in a quarter. Not a failure — just a different operating environment.
+
+We help leadership teams at consulting firms build the rhythm that scales delivery without grinding the people doing it. Worth 20 minutes to share what we've seen?</div>
+        </div>
+      </div>
+      <div id="ar-li-post" class="tab-content">
+        <div class="draft-block">
+          <div class="draft-label">LinkedIn Post Idea <button class="copy-btn" onclick="copyText(this,'ar-post-body')">Copy</button></div>
+          <div class="draft-text" id="ar-post-body">Getting named in a Forrester report is a milestone. It's also a stress test in slow motion.
+
+Here's what we see in professional services firms after major analyst recognition: the next 12 months are the hardest.
+
+Not because anything went wrong. But because the delivery model that earned the recognition was built for the company you were. The recognition creates demand for the company you're about to become.
+
+The gap between those two things — that's where good firms stumble.
+
+The ones that navigate it well do one thing consistently: they stop running on institutional memory and start running on shared operating agreements. Clear quarterly priorities. Explicit capacity planning. A leadership team that reviews together and adjusts together — instead of each practice lead running their own kingdom.
+
+Analyst recognition is earned. Scaling it is a choice.
+
+And it has to be made before the new clients arrive, not while they're already at the door.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- WARM TOUCHPOINTS -->
+  <div class="section-heading" style="margin-top:32px;">📬 Warm Touchpoints — This Week</div>
+
+  <!-- 6. SOWER PRIVATE CREDIT -->
+  <div class="company-card">
+    <div class="company-card-header" onclick="toggleCard(this)">
+      <div class="score-badge score-8">8</div>
+      <div class="company-meta">
+        <div class="company-name">Sower Private Credit</div>
+        <div class="company-meta-row">
+          <span class="tag signal">Strategic Move</span>
+          <span class="tag sheet">Simons.Coach</span>
+          <span class="tag date">May 2026</span>
+        </div>
+        <div style="font-size:12px; color:#63666b; margin-top:5px;">The Arthur ribbon cutting + Antlerview 1213 retail project advancing</div>
+      </div>
+      <button class="toggle-btn">View Drafts ▾</button>
+    </div>
+    <div class="company-card-body">
+      <div class="content-tabs">
+        <button class="tab-btn active" onclick="switchTab(this,'sow-signal')">Signal</button>
+        <button class="tab-btn" onclick="switchTab(this,'sow-email')">Email</button>
+        <button class="tab-btn" onclick="switchTab(this,'sow-li-msg')">LinkedIn DM</button>
+      </div>
+      <div id="sow-signal" class="tab-content active">
+        <div class="signal-box">
+          <strong>What happened:</strong> Sower Investment Partners completed the ribbon cutting of The Arthur, a 329-unit apartment community at 48th & Dodge in Omaha (developed with ACCESS Commercial and Burlington Capital, honoring Dr. Arthur Pittman). Also advancing Antlerview 1213, a high-visibility retail project at 180th & Maple with Chase Bank and 7 Brew Coffee secured on ground leases.
+        </div>
+        <div class="angle-box">
+          <strong>Outreach angle:</strong> Multiple simultaneous project closings + launches = growing deal complexity. Warm touchpoint — congratulate on The Arthur, note the pattern. Good opening for Jared Hollinger.
+        </div>
+        <div class="contacts-row">
+          <span class="contact-chip">Jared Hollinger &lt;jhollinger@sower.com&gt;</span>
+          <span class="contact-chip">Joe Platten &lt;jplatten@sower.com&gt;</span>
+          <span class="contact-chip">Kali Gilbert &lt;kgilbert@sower.com&gt;</span>
+        </div>
+      </div>
+      <div id="sow-email" class="tab-content">
+        <div class="subject-line"><span>Subject: </span>The Arthur — nice work</div>
+        <div class="draft-block">
+          <div class="draft-label">Email Body <button class="copy-btn" onclick="copyText(this,'sow-email-body')">Copy</button></div>
+          <div class="draft-text" id="sow-email-body">Hi [First Name],
+
+The Arthur ribbon cutting is well deserved — 329 units and a story worth telling. And Antlerview 1213 coming together at the same time with Chase and 7 Brew locked in.
+
+At some point the number of moving parts on parallel projects starts to demand a different kind of leadership operating rhythm — not just project management, but making sure the team is prioritizing and deciding together, not just executing in parallel.
+
+Happy to share what we've seen work for investment firms managing this kind of deal complexity. No agenda — just a real conversation if the timing's right.
+
+— [Rob / John]
+Coach.Win | elevate@coach.win</div>
+        </div>
+      </div>
+      <div id="sow-li-msg" class="tab-content">
+        <div class="draft-block">
+          <div class="draft-label">LinkedIn Message <button class="copy-btn" onclick="copyText(this,'sow-li-msg-body')">Copy</button></div>
+          <div class="draft-text" id="sow-li-msg-body">Hey [First Name] — The Arthur looks great. Ribbon cutting + Antlerview advancing at the same time — you're clearly not slowing down.
+
+At some point parallel deal complexity starts demanding a different operating rhythm from the leadership team. Happy to share what we've seen work at firms at this stage — worth a quick conversation?</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 7. DIFFCO -->
+  <div class="company-card">
+    <div class="company-card-header" onclick="toggleCard(this)">
+      <div class="score-badge score-7">7</div>
+      <div class="company-meta">
+        <div class="company-name">DIFFCO</div>
+        <div class="company-meta-row">
+          <span class="tag signal">Industry Award + Fund</span>
+          <span class="tag sheet">Simons.Coach</span>
+          <span class="tag date">May 2026</span>
+        </div>
+        <div style="font-size:12px; color:#63666b; margin-top:5px;">ASA Excellence in Construction award + 7th industrial aggregation fund deployed</div>
+      </div>
+      <button class="toggle-btn">View Drafts ▾</button>
+    </div>
+    <div class="company-card-body">
+      <div class="content-tabs">
+        <button class="tab-btn active" onclick="switchTab(this,'diff-signal')">Signal</button>
+        <button class="tab-btn" onclick="switchTab(this,'diff-email')">Email</button>
+        <button class="tab-btn" onclick="switchTab(this,'diff-li-msg')">LinkedIn DM</button>
+      </div>
+      <div id="diff-signal" class="tab-content active">
+        <div class="signal-box">
+          <strong>What happened:</strong> DIFFCO recognized at the 2026 ASA Excellence in Construction awards. Also completed deployment of their 7th industrial aggregation fund with active acquisitions in recent months.
+        </div>
+        <div class="angle-box">
+          <strong>Outreach angle:</strong> 7th fund deployed + active acquisitions + industry award = a company building credibility and complexity at the same time. Good warm touchpoint for Matt Diffendal about what's next.
+        </div>
+        <div class="contacts-row">
+          <span class="contact-chip">Matt Diffendal &lt;matt@diffcollc.com&gt;</span>
+          <span class="contact-chip">Tina Diffendal &lt;tina@diffcollc.com&gt;</span>
+          <span class="contact-chip">Marty Spake &lt;mspake@diffcollc.com&gt;</span>
+        </div>
+      </div>
+      <div id="diff-email" class="tab-content">
+        <div class="subject-line"><span>Subject: </span>7th fund + ASA award — what's the next chapter?</div>
+        <div class="draft-block">
+          <div class="draft-label">Email Body <button class="copy-btn" onclick="copyText(this,'diff-email-body')">Copy</button></div>
+          <div class="draft-text" id="diff-email-body">Hi Matt,
+
+Seven funds deployed and an ASA award in the same season — that's a lot of momentum.
+
+The interesting question at this point usually isn't "what's the next deal?" It's "what does the company look like at 10 funds, and are we building the leadership infrastructure to get there without it all running through you?"
+
+We work with owner-led construction and industrial businesses on exactly this — the operating model that scales without the founder becoming the constraint.
+
+Happy to share what we've seen. 30 minutes, no pitch.
+
+— [Rob / John]
+Coach.Win | elevate@coach.win</div>
+        </div>
+      </div>
+      <div id="diff-li-msg" class="tab-content">
+        <div class="draft-block">
+          <div class="draft-label">LinkedIn Message <button class="copy-btn" onclick="copyText(this,'diff-li-msg-body')">Copy</button></div>
+          <div class="draft-text" id="diff-li-msg-body">Hey Matt — 7th fund deployed and ASA recognition in the same stretch. Nice work.
+
+The question we usually find owner-led construction firms asking at this stage: "Are we building the leadership infrastructure for 10 funds, or are we still running everything through me?"
+
+Happy to share what we've seen work. Worth 20 minutes?</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- HOLD SECTION -->
+  <div class="section-heading red" style="margin-top:32px;">⚠ Hold — Review Before Outreach</div>
+  <div class="hold-card">
+    <div class="company">EAD Corporate</div>
+    <div class="note">EAD Constructors, Inc. (Omaha subsidiary) filed Chapter 11 in October 2025 with $10M–$50M in liabilities. Unclear whether this affects EAD Corporate (parent company). <strong>Do not reach out this week.</strong> Verify the situation with any shared network contacts before engaging. If EAD Corporate is separate and stable, a restructuring context can actually be an opening for coaching conversations — but only after you understand the situation.</div>
+  </div>
+
+  <!-- NO FINDINGS -->
+  <div class="section-heading gray" style="margin-top:32px;">— No Actionable Signals This Week</div>
+  <div class="no-findings-grid">
+    <div class="no-finding-chip">
+      <div class="name">Drew Radon Group</div>
+      <div class="sheet-tag">Entresmart</div>
+      <div class="note">Curt Drew is primary contact on NRD — use that signal instead.</div>
+    </div>
+    <div class="no-finding-chip">
+      <div class="name">New Street Properties</div>
+      <div class="sheet-tag">Entresmart</div>
+      <div class="note">Limited public footprint. Monitor ongoing.</div>
+    </div>
+    <div class="no-finding-chip">
+      <div class="name">NVK Learning</div>
+      <div class="sheet-tag">Entresmart</div>
+      <div class="note">Nebraska childcare funding cuts create sector headwinds. No company-specific signals.</div>
+    </div>
+    <div class="no-finding-chip">
+      <div class="name">Hyde Park Mouldings</div>
+      <div class="sheet-tag">Entresmart</div>
+      <div class="note">Specialized niche. No 2026 news found.</div>
+    </div>
+    <div class="no-finding-chip">
+      <div class="name">Eggers Executive Search</div>
+      <div class="sheet-tag">Entresmart</div>
+      <div class="note">Internally hiring but no growth signal this week.</div>
+    </div>
+    <div class="no-finding-chip">
+      <div class="name">Holliday Energy Law Group</div>
+      <div class="sheet-tag">Entresmart</div>
+      <div class="note">LinkedIn activity (HELG Knowledge Center) but no major signal.</div>
+    </div>
+    <div class="no-finding-chip">
+      <div class="name">Restore Hyper Wellness</div>
+      <div class="sheet-tag">Entresmart</div>
+      <div class="note">Brand-level franchise growth, no local news for Kunal's location.</div>
+    </div>
+    <div class="no-finding-chip">
+      <div class="name">Arbor Aesthetics</div>
+      <div class="sheet-tag">Simons.Coach</div>
+      <div class="note">Industry growing but no company-specific signals.</div>
+    </div>
+    <div class="no-finding-chip">
+      <div class="name">Sower Services</div>
+      <div class="sheet-tag">Simons.Coach</div>
+      <div class="note">Signals captured under Sower Private Credit (same parent).</div>
+    </div>
+    <div class="no-finding-chip">
+      <div class="name">Caring Solutions SA</div>
+      <div class="sheet-tag">Simons.Coach</div>
+      <div class="note">Limited public footprint. No signals this week.</div>
+    </div>
+    <div class="no-finding-chip">
+      <div class="name">Raphael & Raphael</div>
+      <div class="sheet-tag">Simons.Coach</div>
+      <div class="note">Quietly expanding but nothing actionable this week.</div>
+    </div>
+    <div class="no-finding-chip">
+      <div class="name">CCE</div>
+      <div class="sheet-tag">AI ONE</div>
+      <div class="note">No news found for CCE Nebraska.</div>
+    </div>
+    <div class="no-finding-chip">
+      <div class="name">Metl-Fab</div>
+      <div class="sheet-tag">AI ONE</div>
+      <div class="note">Industry growing 5.5% in 2026 (data center surge) — no company-level news.</div>
+    </div>
+    <div class="no-finding-chip">
+      <div class="name">Investors Realty</div>
+      <div class="sheet-tag">Entresmart</div>
+      <div class="note">Strong market activity but signal is low-recency. Monitor for Q3.</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- FOOTER -->
+<div class="footer">
+  <img src="https://files.simons.coach/coachwin/brand/assets/logos/logo-reverse-white-blue.png" alt="Coach.Win">
+  <p>© 2026 COACH.WIN, INC. &nbsp;·&nbsp; <a href="mailto:elevate@coach.win">elevate@coach.win</a> &nbsp;·&nbsp; <a href="https://coach.win/coaching-toolkit">coach.win/coaching-toolkit</a></p>
+  <p style="margin-top:4px;">Collision Engine — Automated Weekly Scan &nbsp;·&nbsp; June 1, 2026</p>
+</div>
+
+<script>
+function toggleCard(header) {
+  const body = header.nextElementSibling;
+  const btn = header.querySelector('.toggle-btn');
+  const isOpen = body.classList.contains('open');
+  body.classList.toggle('open', !isOpen);
+  btn.textContent = isOpen ? 'View Drafts ▾' : 'Close ▲';
+}
+
+function switchTab(btn, targetId) {
+  const card = btn.closest('.company-card-body');
+  card.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  card.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById(targetId).classList.add('active');
+}
+
+function copyText(btn, id) {
+  const text = document.getElementById(id).textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = 'Copied ✓';
+    btn.classList.add('copied');
+    setTimeout(() => {
+      btn.textContent = 'Copy';
+      btn.classList.remove('copied');
+    }, 2000);
+  });
+}
+</script>
+</body>
+</html>
