@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Collision Engine — June 15, 2026</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="icon" href="https://files.simons.coach/coachwin/brand/assets/logos/flag-icon-blue.png">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin:0; padding:0; }
+body { font-family:'Montserrat','Segoe UI',sans-serif; background:#f0f2f5; color:#434748; font-size:14px; line-height:1.55; }
+a { color:#16478e; }
+.header { background:#16478e; background-image:url('https://files.simons.coach/coachwin/brand/assets/backgrounds/Topographic_Map_Blue.png'); background-size:cover; background-position:center; color:#fff; padding:26px 40px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:16px; }
+.header-left { display:flex; align-items:center; gap:18px; }
+.header-logo { height:42px; object-fit:contain; }
+.header-title h1 { font-family:'Oswald',sans-serif; font-size:22px; font-weight:700; letter-spacing:2px; text-transform:uppercase; line-height:1.1; }
+.header-title p { font-size:12px; color:rgba(255,255,255,0.78); margin-top:3px; letter-spacing:1px; }
+.scan-date { font-size:12px; color:rgba(255,255,255,0.8); letter-spacing:1px; text-align:right; }
+.scan-date strong { color:#fff; font-size:15px; display:block; margin-top:2px; }
+.summary-bar { background:#fff; border-bottom:2px solid #e8eaed; padding:16px 40px; display:flex; gap:20px; flex-wrap:wrap; }
+.stat-card { background:#f5f7fa; border-left:4px solid #16478e; padding:10px 18px; border-radius:4px; min-width:120px; }
+.stat-card .num { font-family:'Oswald',sans-serif; font-size:28px; font-weight:700; color:#16478e; line-height:1; }
+.stat-card .label { font-size:11px; color:#63666b; text-transform:uppercase; letter-spacing:.5px; margin-top:3px; }
+.stat-card.light { border-left-color:#6ba3d6; } .stat-card.light .num { color:#6ba3d6; }
+.stat-card.gray { border-left-color:#c6c6c8; } .stat-card.gray .num { color:#63666b; }
+.main { max-width:1180px; margin:0 auto; padding:28px 32px 56px; }
+.section-heading { font-family:'Oswald',sans-serif; font-size:13px; font-weight:700; letter-spacing:2.5px; text-transform:uppercase; color:#fff; background:#16478e; padding:9px 16px; margin:30px 0 16px; border-radius:3px; }
+.section-heading.gray { background:#63666b; }
+.intro { background:#fff; border:1px solid #e4e8ef; border-left:4px solid #6ba3d6; border-radius:6px; padding:16px 20px; margin-bottom:8px; }
+.company-card { background:#fff; border-radius:6px; box-shadow:0 1px 4px rgba(0,0,0,.08); margin-bottom:16px; overflow:hidden; border:1px solid #e4e8ef; }
+.company-card-header { padding:15px 20px; cursor:pointer; display:flex; align-items:center; gap:14px; transition:background .15s; user-select:none; }
+.company-card-header:hover { background:#f8f9fb; }
+.score-badge { background:#6ba3d6; color:#fff; font-family:'Oswald',sans-serif; font-size:18px; font-weight:700; width:42px; height:42px; border-radius:6px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.score-badge.mid { background:#16478e; } .score-badge.high { background:#bd2b36; }
+.cc-title { flex:1; }
+.cc-name { font-family:'Oswald',sans-serif; font-size:18px; font-weight:600; color:#16478e; letter-spacing:.5px; }
+.cc-meta { margin-top:4px; }
+.sheet-tag { font-size:10px; background:#eef2f8; color:#16478e; padding:2px 8px; border-radius:10px; letter-spacing:.5px; text-transform:uppercase; font-weight:600; }
+.type-tag { font-size:10px; background:#f3f0e8; color:#9a7d12; padding:2px 8px; border-radius:10px; letter-spacing:.5px; text-transform:uppercase; font-weight:600; margin-left:4px; }
+.expand-arrow { font-size:16px; color:#9aa3af; transition:transform .2s; }
+.company-card.open .expand-arrow { transform:rotate(180deg); }
+.company-card-body { display:none; padding:0 20px 20px; border-top:1px solid #eef0f3; }
+.company-card.open .company-card-body { display:block; }
+.signal-row, .contacts-row { padding:14px 0 4px; font-size:13px; }
+.sig-label { display:inline-block; font-family:'Oswald',sans-serif; font-size:10px; letter-spacing:1.5px; color:#63666b; background:#f0f2f5; padding:2px 8px; border-radius:3px; margin-right:8px; vertical-align:middle; }
+.src { font-size:11px; margin-left:6px; white-space:nowrap; }
+.contact-chip { display:inline-block; background:#f5f7fa; border:1px solid #e4e8ef; border-radius:14px; padding:3px 10px; font-size:11px; margin:3px 4px 0 0; }
+.draft-block { margin-top:14px; }
+.draft-label { font-family:'Oswald',sans-serif; font-size:11px; letter-spacing:1.5px; color:#16478e; border-bottom:1px solid #e4e8ef; padding-bottom:5px; margin-bottom:8px; }
+.draft-label .subj { float:right; color:#63666b; font-family:'Montserrat',sans-serif; font-weight:600; letter-spacing:0; text-transform:none; font-size:12px; }
+.draft-label .opt { color:#9aa3af; font-family:'Montserrat',sans-serif; letter-spacing:0; text-transform:none; font-size:11px; font-weight:400; }
+.draft-body { background:#fafbfc; border:1px solid #eef0f3; border-radius:5px; padding:12px 16px; font-size:13px; }
+.draft-body p { margin-bottom:9px; } .draft-body p:last-child { margin-bottom:0; }
+.draft-body.post { border-left:3px solid #6ba3d6; }
+.nf-list { list-style:none; background:#fff; border:1px solid #e4e8ef; border-radius:6px; padding:8px 0; }
+.nf-list li { padding:10px 20px; border-bottom:1px solid #f0f2f5; font-size:13px; }
+.nf-list li:last-child { border-bottom:none; }
+.nf-note { color:#7a818c; font-size:12px; }
+.intel-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(330px,1fr)); gap:14px; }
+.intel-card { background:#fff; border:1px solid #e4e8ef; border-radius:6px; padding:14px 16px; }
+.intel-name { font-family:'Oswald',sans-serif; font-size:15px; font-weight:600; color:#16478e; letter-spacing:.5px; }
+.intel-desc { font-size:12px; color:#63666b; margin:6px 0; }
+.intel-web { font-size:11px; word-break:break-all; }
+.intel-sigs { list-style:none; margin-top:8px; }
+.intel-sigs li { font-size:12px; padding:6px 0; border-top:1px solid #f0f2f5; color:#4a4f55; }
+.mini-score { display:inline-block; background:#16478e; color:#fff; font-family:'Oswald',sans-serif; font-size:10px; padding:1px 6px; border-radius:8px; margin-right:5px; }
+.intel-none { font-size:12px; color:#9aa3af; margin-top:8px; font-style:italic; }
+.footer { background:#434748; color:#c6c6c8; text-align:center; padding:22px 20px; font-size:12px; }
+.footer a { color:#6ba3d6; }
+.footer img { height:30px; margin-bottom:10px; object-fit:contain; }
+.note-bar { font-size:11px; color:#7a818c; margin:6px 0 0; }
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="header-left">
+    <img class="header-logo" src="https://files.simons.coach/coachwin/brand/assets/logos/logo-reverse-white-blue.png" alt="Coach.Win">
+    <div class="header-title">
+      <h1>Collision Engine — Weekly Intelligence</h1>
+      <p>Prospect signal scan &amp; outreach drafts</p>
+    </div>
+  </div>
+  <div class="scan-date">SCAN DATE<strong>June 15, 2026</strong></div>
+</div>
+
+<div class="summary-bar">
+  <div class="stat-card"><div class="num">24</div><div class="label">Companies Scanned</div></div>
+  <div class="stat-card light"><div class="num">17</div><div class="label">Actionable Signals (5+)</div></div>
+  <div class="stat-card"><div class="num">3</div><div class="label">Top Signals (8+)</div></div>
+  <div class="stat-card gray"><div class="num">9</div><div class="label">No Findings</div></div>
+  <div class="stat-card"><div class="num">12</div><div class="label">Outreach Drafts</div></div>
+</div>
+
+<div class="main">
+  <div class="intro">
+    <strong>This week:</strong> Two Omaha-area scale-ups lead the board — <strong>ToData Analytics</strong> (new COO) and <strong>Heritage Communities</strong> (new East/West sales VPs + 40%+ portfolio growth), both restructuring leadership to keep pace with growth. <strong>Andrew Reise</strong> (Forrester recognition) and <strong>CCE</strong> (Nebraska data-center boom) round out the priority targets. Drafts are anchored on each company's strongest signal — swap in the contact's first name before sending.
+    <div class="note-bar">Note: Entresmart (AI ONE) flagged — John Lund is a Coach.Win co-founder, likely an affiliated entity, not a prospect. Confirm before outreach.</div>
+  </div>
+
+  <div class="section-heading">Priority Outreach — Ranked by Signal Score</div>
+  
+    <div class="company-card">
+      <div class="company-card-header" onclick="toggle(this)">
+        <div class="score-badge high">8</div>
+        <div class="cc-title">
+          <div class="cc-name">ToData Analytics</div>
+          <div class="cc-meta"><span class="sheet-tag">Simons.Coach</span> <span class="type-tag">Leadership Change</span></div>
+        </div>
+        <div class="expand-arrow">▾</div>
+      </div>
+      <div class="company-card-body">
+        <div class="signal-row"><span class="sig-label">SIGNAL</span>Named Stephanie Anderson COO (Feb 2026) to scale operations and expand into clinical research, CPA firms, and new verticals — alongside new owner/CEO Nicole Osborn driving the next phase of growth. <a class="src" href="https://www.prnewswire.com/news-releases/todata-names-stephanie-anderson-chief-operating-officer-302676140.html" target="_blank">source ↗</a></div>
+        <div class="contacts-row"><span class="sig-label">CONTACTS</span><span class="contact-chip">Andrew Kimball &middot; <a href="mailto:akimball@todata.com">akimball@todata.com</a></span><span class="contact-chip">Barb Geiger &middot; <a href="mailto:bgeiger@todata.com">bgeiger@todata.com</a></span><span class="contact-chip">Ben Titus &middot; <a href="mailto:btitus@todata.com">btitus@todata.com</a></span></div>
+        <div class="draft-block">
+          <div class="draft-label">EMAIL DRAFT <span class="subj">Subject: The COO honeymoon</span></div>
+          <div class="draft-body"><p>Hi [First Name], saw ToData brought on Stephanie Anderson as COO — congrats. That&#x27;s a real signal about where you&#x27;re headed.</p><p>Here&#x27;s the pattern we see with fast-growing, owner-led companies right after a COO joins: the founder and the new operator spend the first two quarters quietly disagreeing about priorities. Not loudly. Quietly — because nobody wrote them down together.</p><p>In our experience working with companies at this stage, the fix isn&#x27;t more meetings. It&#x27;s one shared quarterly game plan the whole leadership team actually owns. Especially when you&#x27;re pushing into clinical research and CPA firms at the same time.</p><p>We help owner-led teams get aligned on the three things that matter this quarter and ignore the other forty.</p><p>Worth a coffee? No pitch — just compare notes on what works when you&#x27;re scaling into new verticals.</p><p>— Rob</p></div>
+        </div>
+        <div class="draft-block">
+          <div class="draft-label">LINKEDIN MESSAGE</div>
+          <div class="draft-body"><p>Congrats on bringing Stephanie on as COO — big move. The first couple quarters after a new operator joins are where a lot of growing companies quietly lose alignment. We work with owner-led teams on exactly that. Open to swapping notes over coffee sometime? No agenda.</p></div>
+        </div>
+        
+        <div class="draft-block">
+          <div class="draft-label">LINKEDIN POST IDEA <span class="opt">(broader trend — don't name the prospect)</span></div>
+          <div class="draft-body post"><p>You finally hired a COO. Congrats. Now here&#x27;s the part nobody warns you about.</p><p>The first two quarters, you and your new operator are going to quietly disagree about priorities. Not loudly. Quietly. Because you never wrote them down together.</p><p>We&#x27;ve seen this about 400 times with owner-led companies. The founder thinks the COO knows the plan. The COO thinks the founder will hand them the plan. There is no plan — there&#x27;s a founder&#x27;s instinct that&#x27;s never been made explicit.</p><p>The fix isn&#x27;t a longer onboarding. It&#x27;s one quarterly game plan you build together, in a room.</p><p>What would have to be true for your new COO to make the right call without asking you? Answer that, and you&#x27;ve actually hired a COO. Don&#x27;t, and you&#x27;ve hired an expensive assistant.</p></div>
+        </div>
+      </div>
+    </div>
+    <div class="company-card">
+      <div class="company-card-header" onclick="toggle(this)">
+        <div class="score-badge high">8</div>
+        <div class="cc-title">
+          <div class="cc-name">Heritage Communities</div>
+          <div class="cc-meta"><span class="sheet-tag">Simons.Coach</span> <span class="type-tag">Leadership Change</span></div>
+        </div>
+        <div class="expand-arrow">▾</div>
+      </div>
+      <div class="company-card-body">
+        <div class="signal-row"><span class="sig-label">SIGNAL</span>New East/West sales VP structure (Jodi Langhorst, Tina Cunningham, Apr 2026) plus a 33% portfolio expansion into KS/MO under the new SageGrove brand — 40%+ growth over the past year. <a class="src" href="https://www.seniorlivingnews.com/heritage-communities-appoints-jodi-langhorst-as-vice-president-of-sales-west-division/" target="_blank">source ↗</a></div>
+        <div class="contacts-row"><span class="sig-label">CONTACTS</span><span class="contact-chip">Amy Birkel &middot; <a href="mailto:abirkel@heritage-communities.com">abirkel@heritage-communities.com</a></span><span class="contact-chip">Farhan Khan &middot; <a href="mailto:fkhan@heritage-communities.com">fkhan@heritage-communities.com</a></span><span class="contact-chip">John Pryor &middot; <a href="mailto:John.Pryor@heritage-communities.com">John.Pryor@heritage-communities.com</a></span><span class="contact-chip">Debbie Petru &middot; <a href="mailto:dpetru@heritage-communities.com">dpetru@heritage-communities.com</a></span></div>
+        <div class="draft-block">
+          <div class="draft-label">EMAIL DRAFT <span class="subj">Subject: Two VPs, one game plan</span></div>
+          <div class="draft-body"><p>Hi [First Name], congrats on the East/West sales restructure — Jodi and Tina stepping into divisional VP roles tells me Heritage is serious about keeping pace with the growth.</p><p>Here&#x27;s the hard part nobody warns you about: the moment you split sales into two divisions, you create two versions of &quot;the plan&quot; — unless the leadership team forces one.</p><p>In our experience with owner-led companies scaling past 25 locations, the bottleneck stops being deals and starts being alignment. Whose priorities win when the divisions disagree?</p><p>We help leadership teams get on one quarterly game plan so two divisions pull the same direction instead of optimizing for themselves. You&#x27;ve already added the people. This is the part that makes the people pay off.</p><p>Worth 20 minutes? Happy to share what we&#x27;ve seen work with multi-site operators at your stage.</p><p>— Rob</p></div>
+        </div>
+        <div class="draft-block">
+          <div class="draft-label">LINKEDIN MESSAGE</div>
+          <div class="draft-body"><p>Saw the new East/West sales VP structure — smart move for where Heritage is headed. The tricky part after a split like that is keeping both divisions on one plan. We work with owner-led teams scaling past 25+ sites on exactly that. Open to a quick coffee to compare notes?</p></div>
+        </div>
+        
+        <div class="draft-block">
+          <div class="draft-label">LINKEDIN POST IDEA <span class="opt">(broader trend — don't name the prospect)</span></div>
+          <div class="draft-body post"><p>Most companies don&#x27;t outgrow their strategy. They outgrow their alignment.</p><p>The classic move when you&#x27;re scaling: split into divisions, hire VPs, add structure. Smart. But here&#x27;s what nobody tells you — the day you create two divisions, you create two plans. Unless the leadership team forces one.</p><p>We&#x27;ve seen this about 400 times with owner-led companies. The growth doesn&#x27;t break you. The quiet disagreement about priorities does.</p><p>The fix isn&#x27;t another org chart. It&#x27;s one quarterly game plan the whole team actually owns.</p><p>What would have to be true for both your divisions to pull the same direction? Ask that in your next leadership meeting and watch what happens.</p></div>
+        </div>
+      </div>
+    </div>
+    <div class="company-card">
+      <div class="company-card-header" onclick="toggle(this)">
+        <div class="score-badge mid">7</div>
+        <div class="cc-title">
+          <div class="cc-name">Andrew Reise</div>
+          <div class="cc-meta"><span class="sheet-tag">Entresmart</span> <span class="type-tag">Industry Event</span></div>
+        </div>
+        <div class="expand-arrow">▾</div>
+      </div>
+      <div class="company-card-body">
+        <div class="signal-row"><span class="sig-label">SIGNAL</span>Named in Forrester&#x27;s CX Strategy Consulting Services Landscape, Q2 2026 (Apr 21) — one of 28 providers recognized; CEO Jeff Lewandowski issued a public statement. <a class="src" href="https://www.prnewswire.com/news-releases/andrew-reise-named-in-cx-strategy-consulting-services-report-by-independent-research-firm-302748080.html" target="_blank">source ↗</a></div>
+        <div class="contacts-row"><span class="sig-label">CONTACTS</span><span class="contact-chip">Andy Mattox &middot; <a href="mailto:andy.mattox@andrewreise.com">andy.mattox@andrewreise.com</a></span><span class="contact-chip">Jeff Lewandowski &middot; <a href="mailto:jeff.lewandowski@andrewreise.com">jeff.lewandowski@andrewreise.com</a></span><span class="contact-chip">Tim Carrigan &middot; <a href="mailto:tim.carrigan@andrewreise.com">tim.carrigan@andrewreise.com</a></span></div>
+        <div class="draft-block">
+          <div class="draft-label">EMAIL DRAFT <span class="subj">Subject: After the Forrester nod</span></div>
+          <div class="draft-body"><p>Hi [First Name], congrats on landing in Forrester&#x27;s CX Strategy Consulting Landscape — that kind of analyst validation is hard-won.</p><p>Here&#x27;s the pattern we see when a firm gets recognized like this: the inbound picks up, the pursuits get bigger, and the team that got you here suddenly has to operate at a different scale. The recognition is the easy part. Capitalizing on it without your operating cadence cracking is the hard part.</p><p>In our experience working with fast-growing professional-services firms, a moment of validation is exactly when leadership needs a tighter quarterly game plan — because now everyone wants a piece of your time.</p><p>We help owner-led teams decide what to say yes to and, harder, what to say no to.</p><p>Worth a coffee to compare notes on scaling a consultancy through a moment like this? No pitch.</p><p>— Rob</p></div>
+        </div>
+        <div class="draft-block">
+          <div class="draft-label">LINKEDIN MESSAGE</div>
+          <div class="draft-body"><p>Congrats on the Forrester recognition — well earned. Funny thing about analyst validation: it creates more demand than most firms are structured to absorb. We work with owner-led professional-services teams on staying aligned when the inbound spikes. Open to a quick coffee?</p></div>
+        </div>
+        
+      </div>
+    </div>
+    <div class="company-card">
+      <div class="company-card-header" onclick="toggle(this)">
+        <div class="score-badge mid">7</div>
+        <div class="cc-title">
+          <div class="cc-name">CCE (Capitol City Electric)</div>
+          <div class="cc-meta"><span class="sheet-tag">AI ONE</span> <span class="type-tag">Industry Event</span></div>
+        </div>
+        <div class="expand-arrow">▾</div>
+      </div>
+      <div class="company-card-body">
+        <div class="signal-row"><span class="sig-label">SIGNAL</span>Google&#x27;s proposed Nebraska data center would need more power than all of Lincoln at peak; CCE markets data-center electrical work and is investing in prefab as it scales. <a class="src" href="https://www.1011now.com/2026/03/13/google-proposes-nebraska-data-center-requiring-more-power-than-all-lincoln/" target="_blank">source ↗</a></div>
+        <div class="contacts-row"><span class="sig-label">CONTACTS</span><span class="contact-chip">Jackson Speer &middot; <a href="mailto:jspeer@cce-ne.com">jspeer@cce-ne.com</a></span></div>
+        <div class="draft-block">
+          <div class="draft-label">EMAIL DRAFT <span class="subj">Subject: Riding the data-center wave</span></div>
+          <div class="draft-body"><p>Hi [First Name], with Google&#x27;s proposed Nebraska data center needing more power than all of Lincoln, every electrical contractor in the state is about to get busy — and CCE is positioned right in the middle of it.</p><p>Here&#x27;s what we&#x27;ve seen happen to fast-growing, owner-led contractors when a demand wave hits: they win the work, then the work wins. Capacity, hiring, and leadership bandwidth all get stretched at once, and the owner becomes the bottleneck on every decision.</p><p>The prefab investment and the new analyst roles tell me you&#x27;re already thinking about this. In our experience, the firms that scale cleanly through a boom are the ones with a quarterly game plan that keeps the leadership team focused while everyone else is just reacting.</p><p>Worth 20 minutes to compare notes on scaling without breaking?</p><p>— Rob</p></div>
+        </div>
+        <div class="draft-block">
+          <div class="draft-label">LINKEDIN MESSAGE</div>
+          <div class="draft-body"><p>The Nebraska data-center boom is going to keep electrical contractors slammed for years. The hard part isn&#x27;t winning the work — it&#x27;s scaling the team without the owner becoming the bottleneck. We work with owner-led contractors on exactly that. Open to a quick coffee?</p></div>
+        </div>
+        
+        <div class="draft-block">
+          <div class="draft-label">LINKEDIN POST IDEA <span class="opt">(broader trend — don't name the prospect)</span></div>
+          <div class="draft-body post"><p>A demand wave is the best thing and the most dangerous thing that can happen to an owner-led company.</p><p>The work shows up. You win it. And then the work wins.</p><p>Here&#x27;s the pattern we see: capacity, hiring, and the owner&#x27;s calendar all max out at the same time, and every decision starts routing back through one person. The boom doesn&#x27;t break you because the market turned. It breaks you because you couldn&#x27;t scale your own leadership fast enough.</p><p>The firms that ride a wave cleanly aren&#x27;t working harder. They&#x27;ve got a quarterly game plan that keeps the leadership team focused while everyone else is just reacting.</p><p>So before the wave hits: what are the three things that matter this quarter — and what are you going to ignore?</p></div>
+        </div>
+      </div>
+    </div>
+    <div class="company-card">
+      <div class="company-card-header" onclick="toggle(this)">
+        <div class="score-badge mid">7</div>
+        <div class="cc-title">
+          <div class="cc-name">NVK Learning</div>
+          <div class="cc-meta"><span class="sheet-tag">Entresmart</span> <span class="type-tag">Growth Signal</span></div>
+        </div>
+        <div class="expand-arrow">▾</div>
+      </div>
+      <div class="company-card-body">
+        <div class="signal-row"><span class="sig-label">SIGNAL</span>The Learning Experience footprint expanding with a new $4.5M+ center under construction for 2026, on top of 25+ existing centers across seven states. <a class="src" href="https://themonroesun.com/the-learning-experience-plans-to-open-a-monroe-location-by-2026/" target="_blank">source ↗</a></div>
+        <div class="contacts-row"><span class="sig-label">CONTACTS</span><span class="contact-chip">Kunal Rao &middot; <a href="mailto:kunal@nvklearning.com">kunal@nvklearning.com</a></span><span class="contact-chip">Manoj Gandhi &middot; <a href="mailto:manoj@nvklearning.com">manoj@nvklearning.com</a></span><span class="contact-chip">Sushil Gandhi &middot; <a href="mailto:sushil@childcareservicesinc.com">sushil@childcareservicesinc.com</a></span></div>
+        <div class="draft-block">
+          <div class="draft-label">EMAIL DRAFT <span class="subj">Subject: 25 centers and counting</span></div>
+          <div class="draft-body"><p>Hi [First Name], saw the new center under construction for 2026 — adding to 25+ already across seven states is no small feat.</p><p>Here&#x27;s the pattern we see with owner-led multi-unit operators at your stage: the model works, so you keep adding units, until one day the thing holding everything together is still the founder&#x27;s head.</p><p>In our experience, that&#x27;s the wall — not capital, not real estate, but leadership capacity and a shared operating cadence across locations that are hundreds of miles apart.</p><p>We help owner-led teams build the quarterly game plan and leadership structure that lets you add the next ten centers without the next ten landing on your plate.</p><p>Worth a coffee to compare notes on multi-state, multi-unit scaling? No pitch — just what we&#x27;ve seen work.</p><p>— Rob</p></div>
+        </div>
+        <div class="draft-block">
+          <div class="draft-label">LINKEDIN MESSAGE</div>
+          <div class="draft-body"><p>25+ centers and another on the way — impressive run. The wall for most multi-unit operators isn&#x27;t capital, it&#x27;s leadership capacity across locations. We work with owner-led teams on exactly that. Open to swapping notes over coffee?</p></div>
+        </div>
+        
+      </div>
+    </div>
+    <div class="company-card">
+      <div class="company-card-header" onclick="toggle(this)">
+        <div class="score-badge mid">7</div>
+        <div class="cc-title">
+          <div class="cc-name">Investors Realty, Inc.</div>
+          <div class="cc-meta"><span class="sheet-tag">Entresmart</span> <span class="type-tag">Industry Event</span></div>
+        </div>
+        <div class="expand-arrow">▾</div>
+      </div>
+      <div class="company-card-body">
+        <div class="signal-row"><span class="sig-label">SIGNAL</span>Firm is publicly &quot;ready for an even busier 2026&quot; in Omaha CRE (stadium, Mutual tower, airport upgrades) and just brokered the $8.3M Old Mill Business Campus sale. <a class="src" href="https://rejournals.com/investors-realtys-weber-ready-for-an-even-busier-2026-in-omahas-cre-market/" target="_blank">source ↗</a></div>
+        <div class="contacts-row"><span class="sig-label">CONTACTS</span><span class="contact-chip">Laura Hansen &middot; <a href="mailto:lhansen@investorsomaha.com">lhansen@investorsomaha.com</a></span><span class="contact-chip">Tim Kerrigan &middot; <a href="mailto:tkerrigan@investorsomaha.com">tkerrigan@investorsomaha.com</a></span><span class="contact-chip">Ryan Zabrowski &middot; <a href="mailto:ryanzabrowski@investorsomaha.com">ryanzabrowski@investorsomaha.com</a></span></div>
+        <div class="draft-block">
+          <div class="draft-label">EMAIL DRAFT <span class="subj">Subject: Ready for a busier 2026</span></div>
+          <div class="draft-body"><p>Hi [First Name], saw the firm&#x27;s read on Omaha CRE — &quot;ready for an even busier 2026,&quot; with the stadium, the Mutual tower, and the airport work all landing at once. Plus the Old Mill close. That&#x27;s a lot of momentum.</p><p>Here&#x27;s the pattern we see with fast-growing, owner-led firms heading into a busy stretch: the deals are there, but the leadership team hasn&#x27;t agreed on what they&#x27;re saying no to. Everyone&#x27;s running hard in slightly different directions.</p><p>In our experience, the firms that turn a busy year into a great one are the ones with a quarterly game plan that keeps the team focused on the few things that actually move the year.</p><p>Worth a coffee to compare notes on scaling a brokerage through a hot market?</p><p>— Rob</p></div>
+        </div>
+        <div class="draft-block">
+          <div class="draft-label">LINKEDIN MESSAGE</div>
+          <div class="draft-body"><p>Omaha CRE is heading into a busy stretch — stadium, Mutual tower, airport work all at once. The firms that win a year like this aren&#x27;t the busiest, they&#x27;re the most focused. We work with owner-led teams on staying aligned when everything&#x27;s moving. Open to coffee?</p></div>
+        </div>
+        
+      </div>
+    </div>
+    <div class="company-card">
+      <div class="company-card-header" onclick="toggle(this)">
+        <div class="score-badge mid">7</div>
+        <div class="cc-title">
+          <div class="cc-name">National Radon Defense</div>
+          <div class="cc-meta"><span class="sheet-tag">Entresmart</span> <span class="type-tag">Industry Event</span></div>
+        </div>
+        <div class="expand-arrow">▾</div>
+      </div>
+      <div class="company-card-body">
+        <div class="signal-row"><span class="sig-label">SIGNAL</span>Runs an annual Leadership Summit for its network of owner-led member companies, themed around scaling smarter and leading stronger — a 2026 summit is being promoted. <a class="src" href="https://www.nationalradondefense.com/leadershipsummitconference.html" target="_blank">source ↗</a></div>
+        <div class="contacts-row"><span class="sig-label">CONTACTS</span><span class="contact-chip">Curt Drew &middot; <a href="mailto:Cdrew@nationalradondefense.com">Cdrew@nationalradondefense.com</a></span><span class="contact-chip">Anthony Maeser &middot; <a href="mailto:amaeser@nationalradondefense.com">amaeser@nationalradondefense.com</a></span><span class="contact-chip">Leif Hansen &middot; <a href="mailto:lhansen@nationalradondefense.com">lhansen@nationalradondefense.com</a></span></div>
+        <div class="draft-block">
+          <div class="draft-label">EMAIL DRAFT <span class="subj">Subject: Your Leadership Summit</span></div>
+          <div class="draft-body"><p>Hi [First Name], been watching what you&#x27;ve built with the Leadership Summit — a whole network of owner-led member businesses trying to scale smarter and lead stronger. That&#x27;s the exact crowd we spend our days with.</p><p>Here&#x27;s the pattern we see: owners come to summits fired up, go home with a notebook full of ideas, and three weeks later they&#x27;re back to firefighting. Not because the ideas were bad — because there was no quarterly game plan to turn inspiration into execution.</p><p>In our experience working with fast-growing owner-led companies, that gap between the summit high and Monday morning is where most growth dies.</p><p>Curious whether there&#x27;s a fit — either helping your members install a planning cadence, or contributing to the Summit itself.</p><p>Worth a conversation?</p><p>— Rob</p></div>
+        </div>
+        <div class="draft-block">
+          <div class="draft-label">LINKEDIN MESSAGE</div>
+          <div class="draft-body"><p>Love what you&#x27;ve built with the Leadership Summit — a network of owner-led companies trying to scale and lead better is exactly who we work with. Curious if there&#x27;s a way to help your members turn summit energy into a real quarterly cadence. Open to a conversation?</p></div>
+        </div>
+        
+      </div>
+    </div>
+    <div class="company-card">
+      <div class="company-card-header" onclick="toggle(this)">
+        <div class="score-badge ">6</div>
+        <div class="cc-title">
+          <div class="cc-name">informativ</div>
+          <div class="cc-meta"><span class="sheet-tag">Simons.Coach</span> <span class="type-tag">Content Activity</span></div>
+        </div>
+        <div class="expand-arrow">▾</div>
+      </div>
+      <div class="company-card-body">
+        <div class="signal-row"><span class="sig-label">SIGNAL</span>Earned its 2026 Great Place To Work Certification (third year running) and named to Fortune Best Workplaces in Texas — while integrating the Sep 2025 Carmatic acquisition. <a class="src" href="https://informativ.com/news/" target="_blank">source ↗</a></div>
+        <div class="contacts-row"><span class="sig-label">CONTACTS</span><span class="contact-chip">David Carner &middot; <a href="mailto:dcarner@informativ.com">dcarner@informativ.com</a></span><span class="contact-chip">Scott Rosenberg &middot; <a href="mailto:srosenberg@informativ.com">srosenberg@informativ.com</a></span><span class="contact-chip">Christina Wofford &middot; <a href="mailto:cwofford@informativ.com">cwofford@informativ.com</a></span></div>
+        <div class="draft-block">
+          <div class="draft-label">EMAIL DRAFT <span class="subj">Subject: Culture through the chaos</span></div>
+          <div class="draft-body"><p>Hi [First Name], congrats on the 2026 Great Place To Work cert — three years running is no accident, especially through an acquisition like Carmatic.</p><p>Here&#x27;s the pattern we see with fast-growing software companies: culture is easy to protect at 40 people and brutal to protect at 140 — particularly when you&#x27;re bolting on a new platform and a new team.</p><p>The cert says you&#x27;re doing it right today. The real question is whether the system that produced it scales with the next acquisition. In our experience working with owner-led companies through M&amp;A, the leadership team&#x27;s alignment is what either carries the culture forward or quietly lets it erode.</p><p>We help teams keep the priorities — and the culture — intact while they integrate.</p><p>Worth a coffee to compare notes?</p><p>— Rob</p></div>
+        </div>
+        <div class="draft-block">
+          <div class="draft-label">LINKEDIN MESSAGE</div>
+          <div class="draft-body"><p>Congrats on the Great Place To Work cert three years running — and through an acquisition, no less. Protecting culture during M&amp;A integration is one of the hardest things we help leadership teams do. Open to a quick coffee to swap notes?</p></div>
+        </div>
+        
+      </div>
+    </div>
+    <div class="company-card">
+      <div class="company-card-header" onclick="toggle(this)">
+        <div class="score-badge ">6</div>
+        <div class="cc-title">
+          <div class="cc-name">New Street Properties</div>
+          <div class="cc-meta"><span class="sheet-tag">Entresmart</span> <span class="type-tag">Strategic Move</span></div>
+        </div>
+        <div class="expand-arrow">▾</div>
+      </div>
+      <div class="company-card-body">
+        <div class="signal-row"><span class="sig-label">SIGNAL</span>Was the seller on the $8.3M Old Mill Business Campus disposition — active portfolio repositioning across multifamily, industrial, and medical office. <a class="src" href="https://rebusinessonline.com/investors-realty-brokers-8-3m-sale-of-old-mill-business-campus-in-omaha/" target="_blank">source ↗</a></div>
+        <div class="contacts-row"><span class="sig-label">CONTACTS</span><span class="contact-chip">Tim Langan &middot; <a href="mailto:tim.langan@newstreetprop.com">tim.langan@newstreetprop.com</a></span><span class="contact-chip">Brian Diedrichsen &middot; <a href="mailto:brian.diedrichsen@newstreetprop.com">brian.diedrichsen@newstreetprop.com</a></span><span class="contact-chip">Lori Meisgeier &middot; <a href="mailto:lori.meisgeier@newstreetprop.com">lori.meisgeier@newstreetprop.com</a></span></div>
+        <div class="draft-block">
+          <div class="draft-label">EMAIL DRAFT <span class="subj">Subject: Recycling the portfolio</span></div>
+          <div class="draft-body"><p>Hi [First Name], saw New Street was the seller on the Old Mill Business Campus — looks like active portfolio repositioning heading into 2026.</p><p>Here&#x27;s the pattern we see with owner-led investment firms when capital starts moving: the deals get the attention, but the leadership team rarely stops to align on the bigger strategy guiding which assets to recycle and where to redeploy.</p><p>In our experience, that&#x27;s where good firms leave returns on the table — not on any single deal, but on the lack of a shared game plan across multifamily, industrial, and medical office.</p><p>We help owner-led teams get clear on the strategy, then build the quarterly cadence to execute it.</p><p>Worth 20 minutes to compare notes on scaling a real estate platform?</p><p>— Rob</p></div>
+        </div>
+        <div class="draft-block">
+          <div class="draft-label">LINKEDIN MESSAGE</div>
+          <div class="draft-body"><p>Saw the Old Mill disposition — looks like New Street is actively repositioning. The strategy guiding what you recycle and where you redeploy is where a lot of value gets made or lost. We work with owner-led investment teams on exactly that. Open to coffee?</p></div>
+        </div>
+        
+      </div>
+    </div>
+    <div class="company-card">
+      <div class="company-card-header" onclick="toggle(this)">
+        <div class="score-badge ">6</div>
+        <div class="cc-title">
+          <div class="cc-name">EAD</div>
+          <div class="cc-meta"><span class="sheet-tag">AI ONE</span> <span class="type-tag">Job Posting</span></div>
+        </div>
+        <div class="expand-arrow">▾</div>
+      </div>
+      <div class="company-card-body">
+        <div class="signal-row"><span class="sig-label">SIGNAL</span>Actively hiring Project Managers / Construction Managers in Omaha — a sign of a full project pipeline and a team stretching to keep up. <a class="src" href="https://www.linkedin.com/company/ead-engineering-automation-and-design/jobs" target="_blank">source ↗</a></div>
+        <div class="contacts-row"><span class="sig-label">CONTACTS</span><span class="contact-chip">Steve Lichter &middot; <a href="mailto:steve@autogrator.com">steve@autogrator.com</a></span></div>
+        <div class="draft-block">
+          <div class="draft-label">EMAIL DRAFT <span class="subj">Subject: Hiring through the growth</span></div>
+          <div class="draft-body"><p>Hi [First Name], noticed EAD is hiring PMs and construction managers in Omaha — usually a sign the project pipeline is full and the team&#x27;s stretching to keep up.</p><p>Here&#x27;s the pattern we see with growing engineering and construction-services firms: you hire to add capacity, but new people without a shared operating cadence add coordination cost before they add output.</p><p>In our experience working with owner-led professional-services firms, the headcount only pays off when the leadership team is aligned on priorities and the new hires plug into a clear quarterly plan.</p><p>We help teams make growth translate into capacity instead of chaos.</p><p>Worth a coffee to compare notes on scaling delivery without losing the plot? No pitch.</p><p>— Rob</p></div>
+        </div>
+        <div class="draft-block">
+          <div class="draft-label">LINKEDIN MESSAGE</div>
+          <div class="draft-body"><p>Saw EAD&#x27;s hiring for PMs and CMs — pipeline must be full. The trick is making new hires add capacity instead of coordination cost. We work with owner-led services firms on staying aligned through growth. Open to a quick coffee?</p></div>
+        </div>
+        
+      </div>
+    </div>
+    <div class="company-card">
+      <div class="company-card-header" onclick="toggle(this)">
+        <div class="score-badge ">5</div>
+        <div class="cc-title">
+          <div class="cc-name">Holliday Energy Law Group</div>
+          <div class="cc-meta"><span class="sheet-tag">Entresmart</span> <span class="type-tag">Job Posting</span></div>
+        </div>
+        <div class="expand-arrow">▾</div>
+      </div>
+      <div class="company-card-body">
+        <div class="signal-row"><span class="sig-label">SIGNAL</span>Hiring oil-and-gas attorneys and title staff across San Antonio and Midland to support a growing team. <a class="src" href="https://theenergylawgroup.com/oil-and-gas-attorney-position/" target="_blank">source ↗</a></div>
+        <div class="contacts-row"><span class="sig-label">CONTACTS</span><span class="contact-chip">Ben Holliday &middot; <a href="mailto:ben@theenergylawgroup.com">ben@theenergylawgroup.com</a></span><span class="contact-chip">Jeremy Horn &middot; <a href="mailto:jeremy@theenergylawgroup.com">jeremy@theenergylawgroup.com</a></span><span class="contact-chip">Nieve Leonor &middot; <a href="mailto:nieve@theenergylawgroup.com">nieve@theenergylawgroup.com</a></span></div>
+        <div class="draft-block">
+          <div class="draft-label">EMAIL DRAFT <span class="subj">Subject: Growing the bench</span></div>
+          <div class="draft-body"><p>Hi [First Name], saw HELG is hiring attorneys and title staff across San Antonio and Midland — growing the bench.</p><p>As an EO guy, you already know the pattern: the firm that&#x27;s great at the work isn&#x27;t automatically great at scaling the team that does the work.</p><p>Here&#x27;s what we see with fast-growing, owner-led professional-services firms — the founder is the quality bar, and every new hire quietly routes back through them until something has to give.</p><p>In our experience, the fix is a leadership team aligned on a few clear priorities and a hiring/onboarding system that doesn&#x27;t depend on the owner. We help owner-led firms build exactly that.</p><p>Worth a coffee to compare notes on scaling a boutique without diluting it?</p><p>— Rob</p></div>
+        </div>
+        <div class="draft-block">
+          <div class="draft-label">LINKEDIN MESSAGE</div>
+          <div class="draft-body"><p>Saw HELG is growing the team across San Antonio and Midland. As an EO guy you know the pattern — scaling the firm is a different skill than doing the work. We help owner-led firms build the structure so growth doesn&#x27;t route everything back through the founder. Open to coffee?</p></div>
+        </div>
+        
+      </div>
+    </div>
+    <div class="company-card">
+      <div class="company-card-header" onclick="toggle(this)">
+        <div class="score-badge ">5</div>
+        <div class="cc-title">
+          <div class="cc-name">Arbor Aesthetics</div>
+          <div class="cc-meta"><span class="sheet-tag">Simons.Coach</span> <span class="type-tag">Job Posting</span></div>
+        </div>
+        <div class="expand-arrow">▾</div>
+      </div>
+      <div class="company-card-body">
+        <div class="signal-row"><span class="sig-label">SIGNAL</span>Hiring an office/AR/receptionist role — a sign of an owner-led company professionalizing the back office so founders can step out of day-to-day firefighting. <a class="src" href="https://www.arboraesthetics.com/careers.html" target="_blank">source ↗</a></div>
+        <div class="contacts-row"><span class="sig-label">CONTACTS</span><span class="contact-chip">Jeff Grewe &middot; <a href="mailto:jeffrey@arboraesthetics.com">jeffrey@arboraesthetics.com</a></span><span class="contact-chip">Amy Grewe &middot; <a href="mailto:amy@arboraesthetics.com">amy@arboraesthetics.com</a></span><span class="contact-chip">Jacob Brown &middot; <a href="mailto:jacob@arboraesthetics.com">jacob@arboraesthetics.com</a></span></div>
+        <div class="draft-block">
+          <div class="draft-label">EMAIL DRAFT <span class="subj">Subject: Getting out of the weeds</span></div>
+          <div class="draft-body"><p>Hi [First Name], saw Arbor&#x27;s hiring for an office/AR role — usually the sign of an owner-led company professionalizing the back office so the founders can stop doing everything themselves. That&#x27;s a real milestone, and a tricky one.</p><p>Here&#x27;s the pattern we see: you add the admin hire, but the systems and priorities still live in the owners&#x27; heads, so the hire helps less than you hoped.</p><p>In our experience working with owner-led companies, a back-office hire only frees you up when there&#x27;s a clear operating cadence for them to plug into.</p><p>We help owners build the quarterly game plan and structure that actually gets them out of the weeds.</p><p>Worth a coffee to compare notes on growing past the founder-does-everything stage?</p><p>— Rob</p></div>
+        </div>
+        <div class="draft-block">
+          <div class="draft-label">LINKEDIN MESSAGE</div>
+          <div class="draft-body"><p>Saw Arbor is adding a back-office role — classic sign of professionalizing operations. The hire only frees the owners up if there&#x27;s a system to plug into. We work with owner-led teams on building exactly that. Open to a quick coffee?</p></div>
+        </div>
+        
+      </div>
+    </div>
+
+  <div class="section-heading gray">No Findings This Week (9)</div>
+  <ul class="nf-list"><li><strong>Drew Radon Group</strong> <span class="sheet-tag">Entresmart</span><br><span class="nf-note">No fresh trigger event this week. Same contact (Curt Drew) as the National Radon Defense record - outreach is best routed through the NRD Leadership Summit signal to avoid duplication.</span></li><li><strong>Hyde Park Mouldings, Inc.</strong> <span class="sheet-tag">Entresmart</span><br><span class="nf-note">No fresh trigger event this week. Searches surfaced only static directory/profile pages and the firm&#x27;s evergreen ICAA Arthur Ross Award (2021). No recent news, leadership change, funding, or content activity found.</span></li><li><strong>Eggers Executive Search</strong> <span class="sheet-tag">Entresmart</span><br><span class="nf-note">No fresh trigger event this week. Profile pages reference recent hires but with no datable announcement in the current window. No 2026 news, funding, awards, or content activity found.</span></li><li><strong>EAD Corporate</strong> <span class="sheet-tag">Simons.Coach</span><br><span class="nf-note">No verified EAD-specific trigger event this week. A search hit (Blaine MN liquid-cooling plant, 175 jobs) was nVent Electric, NOT EAD - a false attribution that must not be used in outreach. See the &#x27;EAD&#x27; record on the AI ONE sheet for an active job-posting signal.</span></li><li><strong>Sower Private Credit</strong> <span class="sheet-tag">Simons.Coach</span><br><span class="nf-note">No actionable trigger event this week. Website current as of early 2026 but no press releases, funding, leadership changes, or recent content surfaced. Same Sower umbrella as Sower Services - worth re-scanning for fund closes or new deals.</span></li><li><strong>Caring Solutions San Antonio</strong> <span class="sheet-tag">Simons.Coach</span><br><span class="nf-note">No actionable trigger event this week. Only steady-state evidence found: ongoing caregiver job postings (chronic in home care) and standard directory listings. No recent news, awards, leadership changes, or notable content activity.</span></li><li><strong>Raphael &amp; Raphael</strong> <span class="sheet-tag">Simons.Coach</span><br><span class="nf-note">No actionable trigger event this week. Found only evergreen firm-history content and a &#x27;Best Accountants in Boston 2026&#x27; directory listicle (low actionability). Multi-generational succession is a latent angle but not a fresh trigger.</span></li><li><strong>Entresmart</strong> <span class="sheet-tag">AI ONE</span><br><span class="nf-note">FLAG - likely a data-quality issue: John Lund is publicly listed as a Co-Founder of Coach.Win itself. Entresmart appears to be an affiliated/internal entity rather than an external prospect. Confirm with account owner before any outreach.</span></li><li><strong>Metl-Fab</strong> <span class="sheet-tag">AI ONE</span><br><span class="nf-note">No actionable trigger event this week. Only evergreen company/profile pages found. Broader industry tailwind exists (data-center/cold-storage construction demand) but nothing company-specific to anchor outreach.</span></li></ul>
+
+  <div class="section-heading">Company Intelligence — Full Reference</div>
+  <div class="intel-grid">
+      <div class="intel-card">
+        <div class="intel-name">Investors Realty, Inc. <span class="sheet-tag">Entresmart</span></div>
+        <div class="intel-desc">Omaha-based commercial real estate firm founded in 1975; manages, sells, leases and buys commercial property. Has brokered over $2.45B in deals and manages 6M+ sq ft across greater Omaha.</div>
+        <a class="intel-web" href="https://www.investorsomaha.com/" target="_blank">https://www.investorsomaha.com/</a>
+        <ul class="intel-sigs"><li><span class="mini-score">7</span> <em>Industry Event</em> — IRI leadership publicly stated the firm is &#x27;ready for an even busier 2026&#x27; in Omaha&#x27;s CRE market, citing strong industrial demand, speculative construction, and downtown catalysts (soccer stadium, Mutual of Omaha tower, airport upgrades).</li><li><span class="mini-score">6</span> <em>Growth Signal</em> — Brokered the $8.3M sale of Old Mill Business Campus, a 66,273 sq ft fully-occupied multi-tenant flex building off West Dodge/I-680.</li></ul>
+      </div>
+      <div class="intel-card">
+        <div class="intel-name">New Street Properties <span class="sheet-tag">Entresmart</span></div>
+        <div class="intel-desc">Omaha-based real estate investment firm (founded 1992) deploying permanent capital nationally into multi-family, industrial, and medical office assets.</div>
+        <a class="intel-web" href="https://newstreetprop.com/" target="_blank">https://newstreetprop.com/</a>
+        <ul class="intel-sigs"><li><span class="mini-score">6</span> <em>Strategic Move</em> — NewStreet Properties was the seller in the $8.3M Old Mill Business Campus disposition, indicating active portfolio repositioning / capital recycling.</li></ul>
+      </div>
+      <div class="intel-card">
+        <div class="intel-name">National Radon Defense <span class="sheet-tag">Entresmart</span></div>
+        <div class="intel-desc">Founded 2007 by Curt Drew; the largest network of independent radon testing/mitigation and indoor air quality companies in North America, spanning 34 states and two Canadian provinces.</div>
+        <a class="intel-web" href="https://www.nationalradondefense.com/" target="_blank">https://www.nationalradondefense.com/</a>
+        <ul class="intel-sigs"><li><span class="mini-score">7</span> <em>Industry Event</em> — National Radon Defense runs an annual Leadership Summit for member companies, themed around scaling, leadership, and building sustainable radon/IAQ businesses. A 2026 summit is being promoted with tickets available.</li></ul>
+      </div>
+      <div class="intel-card">
+        <div class="intel-name">Drew Radon Group <span class="sheet-tag">Entresmart</span></div>
+        <div class="intel-desc">Omaha-based showcase dealership of the National Radon Defense network; provides radon testing/mitigation and indoor air quality services.</div>
+        <a class="intel-web" href="https://www.radonmidwest.com/" target="_blank">https://www.radonmidwest.com/</a>
+        <p class="intel-none">No actionable signals this week.</p>
+      </div>
+      <div class="intel-card">
+        <div class="intel-name">NVK Learning <span class="sheet-tag">Entresmart</span></div>
+        <div class="intel-desc">Operating/staffing entity tied to Manoj Gandhi&#x27;s childcare group - one of the largest franchisees of The Learning Experience (early education/daycare), with 25+ centers across multiple states.</div>
+        <a class="intel-web" href="https://nvklearning.com/" target="_blank">https://nvklearning.com/</a>
+        <ul class="intel-sigs"><li><span class="mini-score">7</span> <em>Growth Signal</em> — The Learning Experience footprint continues active expansion: a new $4.5M+ center is under construction with occupancy targeted for 2H 2026, on top of 25+ existing centers across 7 states.</li></ul>
+      </div>
+      <div class="intel-card">
+        <div class="intel-name">Hyde Park Mouldings, Inc. <span class="sheet-tag">Entresmart</span></div>
+        <div class="intel-desc">Hauppauge, NY-based architectural mouldings manufacturer and leading provider of traditional fibrous plaster and GFRG ornamental fabrications. ~12 employees, serving projects across the U.S. and worldwide.</div>
+        <a class="intel-web" href="https://www.hyde-park.com" target="_blank">https://www.hyde-park.com</a>
+        <p class="intel-none">No actionable signals this week.</p>
+      </div>
+      <div class="intel-card">
+        <div class="intel-name">Eggers Executive Search <span class="sheet-tag">Entresmart</span></div>
+        <div class="intel-desc">Omaha, NE-based financial-services executive search firm recruiting C-suite and executive talent for global banks, regional banks, middle-market PE firms, and fintech startups.</div>
+        <a class="intel-web" href="https://www.eggersesearch.com" target="_blank">https://www.eggersesearch.com</a>
+        <p class="intel-none">No actionable signals this week.</p>
+      </div>
+      <div class="intel-card">
+        <div class="intel-name">Holliday Energy Law Group <span class="sheet-tag">Entresmart</span></div>
+        <div class="intel-desc">Boutique oil-and-gas law firm with offices in San Antonio and Midland, TX, focused solely on the oil and gas industry. Founded by Ben Holliday, immediate past president of EO San Antonio.</div>
+        <a class="intel-web" href="https://theenergylawgroup.com" target="_blank">https://theenergylawgroup.com</a>
+        <ul class="intel-sigs"><li><span class="mini-score">5</span> <em>Job Posting</em> — Firm is actively hiring oil-and-gas attorneys/title staff to support a &#x27;growing team&#x27; across its San Antonio and Midland offices, signaling capacity expansion and rising deal/title-opinion volume.</li></ul>
+      </div>
+      <div class="intel-card">
+        <div class="intel-name">Andrew Reise <span class="sheet-tag">Entresmart</span></div>
+        <div class="intel-desc">Customer-experience (CX) strategy consultancy that helps enterprise organizations diagnose, design, and deliver customer experiences. ~81 active enterprise clients across financial services, insurance, retail, and government.</div>
+        <a class="intel-web" href="https://www.andrewreise.com" target="_blank">https://www.andrewreise.com</a>
+        <ul class="intel-sigs"><li><span class="mini-score">7</span> <em>Industry Event</em> — Andrew Reise was named in Forrester Research&#x27;s &#x27;The Customer Experience Strategy Consulting Services Landscape, Q2 2026&#x27; (announced Apr 21, 2026), one of 28 providers recognized. CEO Jeff Lewandowski issued a public statement framing it as validation.</li></ul>
+      </div>
+      <div class="intel-card">
+        <div class="intel-name">Restore Hyper Wellness <span class="sheet-tag">Entresmart</span></div>
+        <div class="intel-desc">Nation&#x27;s largest provider of science-backed personalized wellness therapies, operating as a franchise with 225+ locations.</div>
+        <a class="intel-web" href="https://www.restore.com" target="_blank">https://www.restore.com</a>
+        <ul class="intel-sigs"><li><span class="mini-score">4</span> <em>Leadership Change</em> — Matt Vonderahe appointed CEO (effective Feb 2025). Company continues aggressive franchise expansion, with franchisees planning ~20 new Pennsylvania locations by 2026 and a long-term goal of 500 locations.</li></ul>
+      </div>
+      <div class="intel-card">
+        <div class="intel-name">Arbor Aesthetics <span class="sheet-tag">Simons.Coach</span></div>
+        <div class="intel-desc">Omaha, NE tree care company (NOT a medical spa, despite the prospect-list label) founded in 2005 by Jeff and Amy Grewe. Certified arborists; TCIA-accredited; 11-50 employees.</div>
+        <a class="intel-web" href="https://arboraesthetics.com" target="_blank">https://arboraesthetics.com</a>
+        <ul class="intel-sigs"><li><span class="mini-score">5</span> <em>Job Posting</em> — Actively hiring an Office Assistant / AR / Receptionist role, a back-office hire that often signals an owner-led firm professionalizing operations as it scales past the founder-does-everything stage.</li><li><span class="mini-score">4</span> <em>Industry Event</em> — Featured in Omaha Magazine&#x27;s &#x27;FACES of Omaha 2025,&#x27; keeping the Grewes&#x27; owner-led growth story visible.</li></ul>
+      </div>
+      <div class="intel-card">
+        <div class="intel-name">EAD Corporate <span class="sheet-tag">Simons.Coach</span></div>
+        <div class="intel-desc">Omaha, NE-based international professional services firm (engineering, controls, and construction management) founded in 2001. Serves pharma, food &amp; beverage, logistics, and manufacturing clients.</div>
+        <a class="intel-web" href="https://eadcorporate.com" target="_blank">https://eadcorporate.com</a>
+        <p class="intel-none">No actionable signals this week.</p>
+      </div>
+      <div class="intel-card">
+        <div class="intel-name">informativ <span class="sheet-tag">Simons.Coach</span></div>
+        <div class="intel-desc">Automotive and consumer-finance credit &amp; compliance software company bringing together Credit Bureau Connection, Dealer Safeguard Solutions, and CreditDriver.</div>
+        <a class="intel-web" href="https://informativ.com" target="_blank">https://informativ.com</a>
+        <ul class="intel-sigs"><li><span class="mini-score">6</span> <em>Content Activity</em> — Earned 2026 Great Place To Work Certification and named to the Fortune Best Workplaces in Texas list - third consecutive year of recognition.</li><li><span class="mini-score">5</span> <em>Growth Signal</em> — Acquired Carmatic (payments-as-a-service platform) in September 2025, expanding from credit/compliance into payments and decisioning - creating classic post-acquisition org/leadership-alignment challenges.</li></ul>
+      </div>
+      <div class="intel-card">
+        <div class="intel-name">DIFFCO <span class="sheet-tag">Simons.Coach</span></div>
+        <div class="intel-desc">Privately held, owner-led civil/industrial construction and maintenance contractor based in Houston/Tomball, TX, serving TX, OK, and LA since 2010. ~49 employees.</div>
+        <a class="intel-web" href="https://diffcollc.com" target="_blank">https://diffcollc.com</a>
+        <ul class="intel-sigs"><li><span class="mini-score">4</span> <em>Growth Signal</em> — Data aggregators indicate DIFFCO is expanding headcount to support growth. CAUTION: aggregator &#x27;$20.8M revenue / 7th aggregation fund&#x27; data likely reflects entity confusion and should be verified before use - DIFFCO is a construction contractor, not a fund manager.</li></ul>
+      </div>
+      <div class="intel-card">
+        <div class="intel-name">Sower Services <span class="sheet-tag">Simons.Coach</span></div>
+        <div class="intel-desc">Sower (formerly 11T Services, rebranded July 2024) is an alternative-investment firm sponsoring funds across income-producing real estate, farmland, real estate securities, and development.</div>
+        <a class="intel-web" href="https://sower.com" target="_blank">https://sower.com</a>
+        <ul class="intel-sigs"><li><span class="mini-score">4</span> <em>Strategic Move</em> — Consolidated its Legacy Farmland Fund into a single unified Sower Farmland Fund platform; Sower Longview Fund II completed acquisition of &#x27;Batavia 165&#x27; retail property - fund-structure simplification plus active deployment.</li></ul>
+      </div>
+      <div class="intel-card">
+        <div class="intel-name">Sower Private Credit <span class="sheet-tag">Simons.Coach</span></div>
+        <div class="intel-desc">Lincoln/Omaha, NE-based alternative investment firm (Sower Investment Partners) with a private credit strategy alongside ventures, commercial real estate, and farmland investments.</div>
+        <a class="intel-web" href="https://sower.com" target="_blank">https://sower.com</a>
+        <p class="intel-none">No actionable signals this week.</p>
+      </div>
+      <div class="intel-card">
+        <div class="intel-name">ToData Analytics <span class="sheet-tag">Simons.Coach</span></div>
+        <div class="intel-desc">Omaha, NE-based business intelligence and data analytics firm (founded 2017, formerly Scarpello Group). Products include CPAGrades, SiteGrades, and the new Tod AI assistant. In an active scaling phase following a 2025 rebrand and new ownership.</div>
+        <a class="intel-web" href="https://todata.com" target="_blank">https://todata.com</a>
+        <ul class="intel-sigs"><li><span class="mini-score">8</span> <em>Leadership Change</em> — ToData named Stephanie Anderson Chief Operating Officer on Feb 2, 2026. She oversees client onboarding, retention, HR and operations as the company scales into clinical research, CPA firms, and new industries.</li><li><span class="mini-score">7</span> <em>Strategic Move</em> — ToData rebranded from Scarpello Group and welcomed Nicole Osborn as Principal Owner &amp; CEO, joining founder/president Ben Titus to lead the next phase of growth. Osborn previously scaled Meridian Clinical Research.</li></ul>
+      </div>
+      <div class="intel-card">
+        <div class="intel-name">Caring Solutions San Antonio <span class="sheet-tag">Simons.Coach</span></div>
+        <div class="intel-desc">San Antonio, TX in-home senior care provider founded ~2010 by sisters Karen Keach and Debbie Mammel. Specializes in dementia care, personal care, and companionship.</div>
+        <a class="intel-web" href="https://www.caringsolutionssa.com" target="_blank">https://www.caringsolutionssa.com</a>
+        <p class="intel-none">No actionable signals this week.</p>
+      </div>
+      <div class="intel-card">
+        <div class="intel-name">Heritage Communities <span class="sheet-tag">Simons.Coach</span></div>
+        <div class="intel-desc">Omaha, NE-based senior living owner/operator running independent living, assisted living, and memory care communities across NE, IA, AZ, KS, MO, and TX. Owner-led, in rapid expansion, ~25 communities and a new SageGrove brand.</div>
+        <a class="intel-web" href="https://www.heritage-communities.com" target="_blank">https://www.heritage-communities.com</a>
+        <ul class="intel-sigs"><li><span class="mini-score">8</span> <em>Leadership Change</em> — Heritage named Jodi Langhorst VP of Sales, West Division and Tina Cunningham VP of Sales, East Division under a new regional model to strengthen leadership amid rapid growth (McKnight&#x27;s, Apr 28, 2026).</li><li><span class="mini-score">8</span> <em>Growth Signal</em> — Heritage expanded its management portfolio by 33% (six new communities), entering Kansas and Missouri (Feb/Mar 2026), rebranding properties under the new SageGrove brand. Grew portfolio 40%+ over the past year.</li></ul>
+      </div>
+      <div class="intel-card">
+        <div class="intel-name">Raphael &amp; Raphael <span class="sheet-tag">Simons.Coach</span></div>
+        <div class="intel-desc">Boston, MA CPA and consulting firm founded in 1941, now in its fourth generation of family ownership. ~30 employees. Tax, assurance, client accounting, and consulting services.</div>
+        <a class="intel-web" href="https://www.rrllp.com" target="_blank">https://www.rrllp.com</a>
+        <p class="intel-none">No actionable signals this week.</p>
+      </div>
+      <div class="intel-card">
+        <div class="intel-name">EAD <span class="sheet-tag">AI ONE</span></div>
+        <div class="intel-desc">Omaha, NE-based international engineering professional services firm (founded 2001) - engineering solutions, project &amp; construction management, and controls/automation. Same underlying company as &#x27;EAD Corporate&#x27; on the Simons.Coach sheet.</div>
+        <a class="intel-web" href="https://eadcorporate.com" target="_blank">https://eadcorporate.com</a>
+        <ul class="intel-sigs"><li><span class="mini-score">6</span> <em>Job Posting</em> — EAD is actively hiring, including an open Project Manager / Construction Manager role in Omaha, indicating ongoing project workload and team growth.</li></ul>
+      </div>
+      <div class="intel-card">
+        <div class="intel-name">Entresmart <span class="sheet-tag">AI ONE</span></div>
+        <div class="intel-desc">Entrepreneurial coaching and peer-group organization helping SMBs grow via strategic planning, facilitation, and coaching. Led by John Lund, a 22-year EO veteran.</div>
+        <a class="intel-web" href="https://entresmart.com" target="_blank">https://entresmart.com</a>
+        <p class="intel-none">No actionable signals this week.</p>
+      </div>
+      <div class="intel-card">
+        <div class="intel-name">CCE (Capitol City Electric) <span class="sheet-tag">AI ONE</span></div>
+        <div class="intel-desc">Union electrical contractor based in Lincoln, NE (founded 1981) providing electrical solutions for commercial, industrial, and data-center projects across Nebraska. Active in prefabrication and growth initiatives.</div>
+        <a class="intel-web" href="https://capitolcityelectricinc.com" target="_blank">https://capitolcityelectricinc.com</a>
+        <ul class="intel-sigs"><li><span class="mini-score">7</span> <em>Industry Event</em> — Google/Alphabet proposed a massive Nebraska data center (March 2026) requiring more than 3x the power Lincoln uses at peak; Nebraska is in a major data-center construction boom. CCE markets data-center electrical work, positioning it to capture surging demand.</li><li><span class="mini-score">6</span> <em>Growth Signal</em> — CCE is publicly emphasizing prefabrication and growth; Jackson Speer was promoted internally to Business Analyst, signaling operational scaling and process-maturity investment.</li></ul>
+      </div>
+      <div class="intel-card">
+        <div class="intel-name">Metl-Fab <span class="sheet-tag">AI ONE</span></div>
+        <div class="intel-desc">Omaha, NE-based (founded 2005) turnkey cold-storage construction and custom metal fabrication company. Delivers insulated metal panels and fabricated components nationwide.</div>
+        <a class="intel-web" href="https://metl-fab.com" target="_blank">https://metl-fab.com</a>
+        <p class="intel-none">No actionable signals this week.</p>
+      </div></div>
+</div>
+
+<div class="footer">
+  <img src="https://files.simons.coach/coachwin/brand/assets/logos/logo-reverse-white-blue.png" alt="Coach.Win"><br>
+  Collision Engine &middot; Generated June 15, 2026 &middot; <a href="mailto:elevate@coach.win">elevate@coach.win</a><br>
+  &copy; 2026 COACH.WIN, INC. &middot; Elevate to Impact
+</div>
+
+<script>
+function toggle(el){ el.parentElement.classList.toggle('open'); }
+// open the top 3 by default
+document.addEventListener('DOMContentLoaded',function(){
+  document.querySelectorAll('.company-card').forEach(function(c,i){ if(i<3) c.classList.add('open'); });
+});
+</script>
+</body>
+</html>
